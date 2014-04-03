@@ -1,6 +1,4 @@
 language: ruby
-before_script:
-- bundle update 
 script: 
 - bundle exec rake test
 rvm:
