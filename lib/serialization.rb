@@ -35,6 +35,11 @@ module Serializer
 	end
 
 	def uint32 values
+		values = [values] unless values.kind_of? Array
+		values.map do |int|
+			raise ArgumentError, "Not an Integer" unless int.kind_of? Integer 
+			[int].pack('L')
+		end
 	end
 
 	# Opertion is well defined for a String or a [String]
