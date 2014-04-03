@@ -62,11 +62,11 @@ class TestAgent < EM::Connection
   end
 end
 
-EventMachine.threadpool_size = 4
+EventMachine.threadpool_size = 8
 
 
 simulation_timestamp = Time.now
-agents_count = 5000
+agents_count = 7000
 request_count = 100
 
 connections = []
@@ -76,7 +76,7 @@ EventMachine.run do
 	Signal.trap("TERM")  { EventMachine.stop }
   EventMachine.add_shutdown_hook { puts "Closing simulation."}
   agents_count.times do |i|
-    connections << EventMachine::connect('192.168.0.3', 12345, TestAgent, i + 10, 'aaaaa', request_count)
+    connections << EventMachine::connect('192.168.0.6', 12345, TestAgent, i + 10, 'aaaaa', request_count)
 	end
   
   EventMachine.add_periodic_timer 1 do 
