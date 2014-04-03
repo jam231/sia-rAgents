@@ -3,22 +3,32 @@
 
 require 'eventmachine'
 
+require_relative '../lib/serialization.rb'
+
+include Serializer
 
 def get_my_orders
-	[3].pack('n') + [0x1f].pack('c')
+  serialize [3, 0x1f], [:uint16, :uint8]
 end
 
 def get_my_stocks
-  [3].pack('n') + [0x1d].pack('c')
+  serialize [3, 0x1d], [:uint16, :uint8]
 end
 
 def register_me(psswd)
-	[2 + 1 + 2 + psswd.bytes.to_a.size].pack('n') + [0].pack('c') +  [psswd.bytes.to_a.size].pack('n') + psswd.bytes.to_a.pack('U*')
+  psswd = serialize [psswd], [:utf8]
+  request_length = 2 + 1 + 2 + psswd.size
+
+  partial = serialize [request_length, 0x4, psswd.size], [:uint16, :uint8, :uint16]
+  [partial, psswd].join
 end
 
 def login_me(userid, psswd)
-  [2 + 1 + 4 + 2 + psswd.bytes.to_a.size].pack('n') + [4].pack('c') + 
-         [userid].pack('N') + [psswd.bytes.to_a.size].pack('n') + psswd.bytes.to_a.pack('U*')
+  psswd = serialize [psswd], [:utf8]
+  request_length = 2 + 1 + 4 + 2 + psswd.size
+
+  partial = serialize [request_length, 0x4, userid, psswd.size], [:uint16, :uint8, :uint32, :uint16]
+  [partial, psswd].join
 end
 
 # Sia agent
