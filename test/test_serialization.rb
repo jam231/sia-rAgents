@@ -37,7 +37,7 @@ end
 
 class TestSerializetionUint8 < Test::Unit::TestCase
 	def test_zero
-		assert_equal [1].pack('N'), Serializer::serialize(0, :uint8).first	
+		assert_equal [0].pack('C'), Serializer::serialize(0, :uint8).first	
 	end
 
 	def test_one
