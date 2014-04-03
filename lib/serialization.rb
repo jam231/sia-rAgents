@@ -16,7 +16,13 @@ module Serializer
 		end.flatten
 	end
 
+	# Opertion is well defined for a Integer or a [Integer]
 	def uint8 values
+		values = [values] unless values.kind_of? Array
+		values.map do |int|
+			raise ArgumentError, "Not an Integer" unless int.kind_of? Integer 
+			[int].pack('C')
+		end
 	end
 
 	def uint16 values
@@ -25,11 +31,11 @@ module Serializer
 	def uint32 values
 	end
 
-	# Opertion is well defined for a string or a [string]
+	# Opertion is well defined for a String or a [String]
 	def utf8 values
 		values = [values] unless values.kind_of? Array
 		values.map do |str|
-			raise ArgumentError, "Not a string" unless str.kind_of? String 
+			raise ArgumentError, "Not a String" unless str.kind_of? String 
 			str.bytes.to_a.pack('U*')
 		end
 	end
