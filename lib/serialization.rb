@@ -25,7 +25,13 @@ module Serializer
 		end
 	end
 
+	# Opertion is well defined for a Integer or a [Integer]
 	def uint16 values
+		values = [values] unless values.kind_of? Array
+		values.map do |int|
+			raise ArgumentError, "Not an Integer" unless int.kind_of? Integer 
+			[int].pack('S')
+		end
 	end
 
 	def uint32 values
