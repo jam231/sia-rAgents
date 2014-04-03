@@ -97,3 +97,35 @@ class TestSerializetionUint16 < Test::Unit::TestCase
 		assert_raise(ArgumentError) { Serializer::serialize(["test string", 4], :uint16) }
 	end
 end
+
+
+class TestSerializetionUint32 < Test::Unit::TestCase
+	def test_zero
+		assert_equal [0].pack('L'), Serializer::serialize(0, :uint32).first	
+	end
+
+	def test_one
+		assert_equal [1].pack('L'), Serializer::serialize(1, :uint32).first
+	end
+
+	def test_max_value
+		value = 1 << 32 - 1
+		assert_equal [value].pack('L'), Serializer::serialize(value, :uint32).first
+	end
+
+	def test_typecheck_string
+		assert_raise(ArgumentError) { Serializer::serialize("test string", :uint32) }
+	end
+
+	def test_typecheck_array1
+		assert_raise(ArgumentError) { Serializer::serialize([4,4], :uint32) }
+	end
+
+	def test_typecheck_array2
+		assert_raise(ArgumentError) { Serializer::serialize([4, "fdsdfdsf"], :uint32) }
+	end
+
+	def test_typecheck_array3
+		assert_raise(ArgumentError) { Serializer::serialize(["test string", 4], :uint32) }
+	end
+end
