@@ -77,6 +77,31 @@ module Deserializer
 		[values, rest.join.force_encoding(old_encoding)]		
 	end
 
+	# Opertion is well defined for a Integer or a [Integer]
+	def self.uint8 byte_sequence
+		raise ArgumentError, "First argument doesn't respond to to_a" unless byte_sequence.respond_to? :to_a
+		byte_sequence = byte_sequence.to_a
+
+		if byte_sequence.size >= 1
+			[byte_sequence.take(1).join.unpack('C').first, byte_sequence.drop(1)]
+		else
+			[nil, byte_sequence]
+		end
+	end
+
+	# Opertion is well defined for a Integer or a [Integer]
+	def self.uint16 byte_sequence
+		raise ArgumentError, "First argument doesn't respond to to_a" unless byte_sequence.respond_to? :to_a
+		byte_sequence = byte_sequence.to_a
+
+		if byte_sequence.size >= 2
+			[byte_sequence.take(2).join.unpack('n').first, byte_sequence.drop(2)]
+		else
+			[nil, byte_sequence]
+		end
+	end
+
+
 	# byte_sequnce -> [deserialized : String, rest : String]
 	def self.utf8 byte_sequence
 		raise ArgumentError, "First argument doesn't respond to to_a" unless byte_sequence.respond_to? :to_a
@@ -91,18 +116,6 @@ module Deserializer
 			utf8_candidate = rest.take(length).join
 
 			[utf8_candidate.force_encoding('utf-8'), rest.drop(length)] 
-		else
-			[nil, byte_sequence]
-		end
-	end
-
-	# Opertion is well defined for a Integer or a [Integer]
-	def self.uint16 byte_sequence
-		raise ArgumentError, "First argument doesn't respond to to_a" unless byte_sequence.respond_to? :to_a
-		byte_sequence = byte_sequence.to_a
-
-		if byte_sequence.size >= 2
-			[byte_sequence.take(2).join.unpack('n').first, byte_sequence.drop(2)]
 		else
 			[nil, byte_sequence]
 		end
