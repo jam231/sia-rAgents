@@ -3,7 +3,6 @@
 module Serializer
 	@supported_types = [:uint8, :uint16, :uint32, :utf8]
 
-	# TODO 
 	def self.serialize values, types
 		values = [values] unless values.kind_of? Array
 		types = [types] unless types.kind_of? Array
@@ -12,9 +11,9 @@ module Serializer
 			raise ArgumentError, "Value - type correspondence is invalid."
 		end
 
-		u = values.zip(types).map do |value, type|
+		values.zip(types).flat_map do |value, type|
 			send(type, value)
-		end.flatten.join
+		end.join
 	end
 
 	# Opertion is well defined for a Integer or a [Integer]
@@ -31,7 +30,7 @@ module Serializer
 		values = [values] unless values.kind_of? Array
 		values.map do |int|
 			raise ArgumentError, "Not an Integer" unless int.kind_of? Integer 
-			[int].pack('S')
+			[int].pack('n')
 		end
 	end
 
@@ -39,7 +38,7 @@ module Serializer
 		values = [values] unless values.kind_of? Array
 		values.map do |int|
 			raise ArgumentError, "Not an Integer" unless int.kind_of? Integer 
-			[int].pack('L')
+			[int].pack('N')
 		end
 	end
 
@@ -48,9 +47,49 @@ module Serializer
 		values = [values] unless values.kind_of? Array
 		values.map do |str|
 			raise ArgumentError, "Not a String" unless str.kind_of? String 
-			str.bytes.to_a.pack('U*')
+			serialized = str.bytes.to_a.pack('U*')
+			[uint16(serialized.size), serialized].join
 		end
 	end
 end
 
 
+module Deserializer
+	@supported_types = [:uint8, :uint16, :uint32, :utf8]
+
+	# bytes_sequence : String, types : [Symbols] -> [values_arr, rest : String]
+	def self.deserialize byte_sequence, types
+		types = [types] unless types.kind_of? Array
+	
+		if byte_sequence.respond_to? :split
+			byte_sequence = byte_sequence.split(//)
+		elsif byte_sequence.respond_to? :to_a
+			byte_sequnce = byte_sequence.to_a
+		else
+			raise ArgumentError "First argument neither responds to :split nor to :to_a."
+		end
+
+		values, rest = [[], byte_sequence]
+
+		types.each do |type| 
+			value, rest = send(type, rest)
+
+			break if value.nil?
+			values << value
+		end
+		[values, rest.join]		
+	end
+
+	# Opertion is well defined for a Integer or a [Integer]
+	def self.uint16 byte_sequence
+		raise ArgumentError, "First argument doesn't respond to to_a" unless byte_sequence.respond_to? :to_a
+		byte_sequence = byte_sequence.to_a
+
+		if byte_sequence.size >= 2
+			[byte_sequence.take(2).join.unpack('n').first, byte_sequence.drop(2)]
+		else
+			[nil, byte_sequence]
+		end
+	end
+
+end
