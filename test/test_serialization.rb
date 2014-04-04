@@ -257,7 +257,7 @@ class TestDeserializationUint8 < Test::Unit::TestCase
 
 	def test_two_uint8_2
 		max_value = 1 << 8 - 1
-		byte_sequence = [max_value, max_value].pack('C')
+		byte_sequence = [max_value, max_value].pack('C*')
 		rest = byte_sequence.slice(1..byte_sequence.size)
 		
 		assert_equal [[max_value], rest], Deserializer.deserialize(byte_sequence, [:uint8])
@@ -265,3 +265,42 @@ class TestDeserializationUint8 < Test::Unit::TestCase
 end
 
 
+class TestDeserializationUint32 < Test::Unit::TestCase
+	def test_zero
+		serialized = [0].pack('N')
+		assert_equal [[0], ""], Deserializer.deserialize(serialized, :uint32)
+	end
+
+	def test_one
+		serialized = [1].pack('N')
+		assert_equal [[1], ""], Deserializer.deserialize(serialized, :uint32)
+	end
+
+	def test_max_value
+		max_value = 1 << 32 - 1
+		serialized = [max_value].pack('N')
+		
+		assert_equal [[max_value], ""], Deserializer.deserialize(serialized, :uint32)
+	end
+
+	def test_empty_sequence
+		serialized = ""
+
+		assert_equal [[], serialized], Deserializer.deserialize(serialized, :uint32)
+	end
+
+	def test_two_uint32
+		max_value = 1 << 32 - 1
+		byte_sequence = [max_value, max_value].pack('N*')
+
+		assert_equal [[max_value, max_value], ""], Deserializer.deserialize(byte_sequence, [:uint32, :uint32])
+	end
+
+	def test_two_uint8_2
+		max_value = 1 << 32 - 1
+		byte_sequence = [max_value, max_value].pack('N*')
+		rest = byte_sequence.slice(4..byte_sequence.size)
+		
+		assert_equal [[max_value], rest], Deserializer.deserialize(byte_sequence, [:uint32])
+	end
+end
