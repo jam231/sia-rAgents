@@ -134,7 +134,54 @@ class TestSerializetionUint32 < Test::Unit::TestCase
 	end
 end
 
+class TestDeserializationUtf8 < Test::Unit::TestCase
+	def test_empty_string
+		serialized = "".force_encoding('utf-8')
+		length = [serialized.bytesize].pack('n')
+		byte_sequence = [length, serialized].join
+		assert_equal [[""], ""], Deserializer.deserialize(byte_sequence, :utf8) 
+	end
 
+	def test_ascii_string
+		serialized = "sample text".force_encoding('utf-8')
+		length = [serialized.bytesize].pack('n')
+		byte_sequence = [length, serialized].join
+		
+		assert_equal [["sample text"], ""], Deserializer.deserialize(byte_sequence, :utf8)
+	end
+
+	def test_utf8_string
+		serialized = "ąść".force_encoding('utf-8')
+		length = [serialized.bytesize].pack('n')
+		byte_sequence = [length, serialized].join
+
+		assert_equal [["ąść"], ""], Deserializer.deserialize(byte_sequence, :utf8)
+	end
+
+	def test_utf8_two_strings
+		serialized = "tąśćt".force_encoding('utf-8')
+		length = [serialized.bytesize].pack('n')
+		byte_sequence = [length, serialized, length, serialized].join
+		assert_equal [["tąśćt", "tąśćt"], ""], Deserializer.deserialize(byte_sequence, [:utf8, :utf8])
+	end
+
+	def test_length_mismatch_string_too_short
+		serialized = "sample text".force_encoding('utf-8')
+		length = [serialized.bytesize - 2].pack('n')
+		byte_sequence = [length, serialized].join
+		rest = "xt".bytes.to_a.pack('U*')
+	
+		assert_equal [["sample te"], rest], Deserializer.deserialize(byte_sequence, :utf8)
+	end
+
+	def test_length_mismatch_string_too_long
+		serialized = "sample text".force_encoding('utf-8')
+		length = [serialized.bytesize + 2].pack('n')
+		byte_sequence = [length, serialized].join
+
+		assert_equal [[], byte_sequence], Deserializer.deserialize(byte_sequence, :utf8)
+	end
+end
 
 
 class TestDeserializationUint16 < Test::Unit::TestCase
