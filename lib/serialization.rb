@@ -4,7 +4,7 @@ module Serializer
 	@supported_types = [:uint8, :uint16, :uint32, :utf8]
 
 	# TODO 
-	def serialize values, types
+	def self.serialize values, types
 		values = [values] unless values.kind_of? Array
 		types = [types] unless types.kind_of? Array
  
@@ -18,7 +18,7 @@ module Serializer
 	end
 
 	# Opertion is well defined for a Integer or a [Integer]
-	def uint8 values
+	def self.uint8 values
 		values = [values] unless values.kind_of? Array
 		values.map do |int|
 			raise ArgumentError, "Not an Integer" unless int.kind_of? Integer 
@@ -27,7 +27,7 @@ module Serializer
 	end
 
 	# Opertion is well defined for a Integer or a [Integer]
-	def uint16 values
+	def self.uint16 values
 		values = [values] unless values.kind_of? Array
 		values.map do |int|
 			raise ArgumentError, "Not an Integer" unless int.kind_of? Integer 
@@ -35,7 +35,7 @@ module Serializer
 		end
 	end
 
-	def uint32 values
+	def self.uint32 values
 		values = [values] unless values.kind_of? Array
 		values.map do |int|
 			raise ArgumentError, "Not an Integer" unless int.kind_of? Integer 
@@ -44,7 +44,7 @@ module Serializer
 	end
 
 	# Opertion is well defined for a String or a [String]
-	def utf8 values
+	def self.utf8 values
 		values = [values] unless values.kind_of? Array
 		values.map do |str|
 			raise ArgumentError, "Not a String" unless str.kind_of? String 
