@@ -47,8 +47,8 @@ module Serializer
 		values = [values] unless values.kind_of? Array
 		values.map do |str|
 			raise ArgumentError, "Not a String" unless str.kind_of? String 
-			serialized = str.bytes.to_a.pack('U*')
-			[uint16(serialized.size), serialized].join
+			serialized = str.force_encoding('utf-8')
+			[uint16(serialized.bytesize), serialized].join
 		end
 	end
 end
@@ -91,5 +91,4 @@ module Deserializer
 			[nil, byte_sequence]
 		end
 	end
-
 end

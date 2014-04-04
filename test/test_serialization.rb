@@ -5,20 +5,20 @@ require 'test/unit'
 
 class TestSerializationUtf8 < Test::Unit::TestCase
 	def test_empty_string
-		serialized_text = "".bytes.to_a.pack('U*')
+		serialized_text = "".force_encoding('utf-8')
 		length = [serialized_text.size].pack('n')
 		assert_equal [length, serialized_text].join,  Serializer.serialize("", :utf8)
 	end
 
 	def test_ascii_string
-		serialized_text = "sample text".bytes.to_a.pack('U*')
+		serialized_text = "sample text".force_encoding('utf-8')
 		length = [serialized_text.size].pack('n')
 		assert_equal [length, serialized_text].join, Serializer.serialize("sample text", :utf8)
 	end
 
 	def test_utf8_string
-		serialized_text = "tąśćt".bytes.to_a.pack('U*')
-		length = [serialized_text.size].pack('n')
+		serialized_text = "tąśćt".force_encoding('utf-8')
+		length = [serialized_text.bytesize].pack('n')
 		assert_equal [length, serialized_text].join, Serializer.serialize("tąśćt", :utf8)
 	end
 
@@ -133,6 +133,7 @@ class TestSerializetionUint32 < Test::Unit::TestCase
 		assert_raise(ArgumentError) { Serializer.serialize(["test string", 4], :uint32) }
 	end
 end
+
 
 
 
