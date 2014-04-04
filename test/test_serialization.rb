@@ -5,15 +5,21 @@ require 'test/unit'
 
 class TestSerializationUtf8 < Test::Unit::TestCase
 	def test_empty_string
-		assert_equal "", Serializer.serialize("", :utf8)
+		serialized_text = "".bytes.to_a.pack('U*')
+		length = [serialized_text.size].pack('n')
+		assert_equal [length, serialized_text].join,  Serializer.serialize("", :utf8)
 	end
 
 	def test_ascii_string
-		assert_equal "sample text".bytes.to_a.pack('U*'), Serializer.serialize("sample text", :utf8)
+		serialized_text = "sample text".bytes.to_a.pack('U*')
+		length = [serialized_text.size].pack('n')
+		assert_equal [length, serialized_text].join, Serializer.serialize("sample text", :utf8)
 	end
 
 	def test_utf8_string
-		assert_equal "tąśćt".bytes.to_a.pack('U*'), Serializer.serialize("tąśćt", :utf8)
+		serialized_text = "tąśćt".bytes.to_a.pack('U*')
+		length = [serialized_text.size].pack('n')
+		assert_equal [length, serialized_text].join, Serializer.serialize("tąśćt", :utf8)
 	end
 
 	def test_typecheck_integer
@@ -67,16 +73,16 @@ end
 
 class TestSerializetionUint16 < Test::Unit::TestCase
 	def test_zero
-		assert_equal [0].pack('S'), Serializer.serialize(0, :uint16)
+		assert_equal [0].pack('n'), Serializer.serialize(0, :uint16)
 	end
 
 	def test_one
-		assert_equal [1].pack('S'), Serializer.serialize(1, :uint16)
+		assert_equal [1].pack('n'), Serializer.serialize(1, :uint16)
 	end
 
 	def test_max_value
 		value = 1 << 16 - 1
-		assert_equal [value].pack('S'), Serializer.serialize(value, :uint16)
+		assert_equal [value].pack('n'), Serializer.serialize(value, :uint16)
 	end
 
 	def test_typecheck_string
@@ -99,16 +105,16 @@ end
 
 class TestSerializetionUint32 < Test::Unit::TestCase
 	def test_zero
-		assert_equal [0].pack('L'), Serializer.serialize(0, :uint32)
+		assert_equal [0].pack('N'), Serializer.serialize(0, :uint32)
 	end
 
 	def test_one
-		assert_equal [1].pack('L'), Serializer.serialize(1, :uint32)
+		assert_equal [1].pack('N'), Serializer.serialize(1, :uint32)
 	end
 
 	def test_max_value
 		value = 1 << 32 - 1
-		assert_equal [value].pack('L'), Serializer.serialize(value, :uint32)
+		assert_equal [value].pack('N'), Serializer.serialize(value, :uint32)
 	end
 
 	def test_typecheck_string
@@ -125,5 +131,46 @@ class TestSerializetionUint32 < Test::Unit::TestCase
 
 	def test_typecheck_array3
 		assert_raise(ArgumentError) { Serializer.serialize(["test string", 4], :uint32) }
+	end
+end
+
+
+
+class TestDeserializationUint16 < Test::Unit::TestCase
+	def test_zero
+		serialized = [0].pack('n')
+		assert_equal [[0], ""], Deserializer.deserialize(serialized, :uint16)
+	end
+
+	def test_one
+		serialized = [1].pack('n')
+		assert_equal [[1], ""], Deserializer.deserialize(serialized, :uint16)
+	end
+
+	def test_max_value
+		max_value = 1 << 16 - 1
+		serialized = [max_value].pack('n')
+		
+		assert_equal [[max_value], ""], Deserializer.deserialize(serialized, :uint16)
+	end
+
+	def test_one_byte_sequence
+		serialized = [1].pack('C')
+
+		assert_equal [[], serialized], Deserializer.deserialize(serialized, :uint16)
+	end
+
+	def test_two_uint16
+		max_value = 1 << 16 - 1
+		byte_sequence = [max_value, max_value].pack('n*')
+
+		assert_equal [[max_value, max_value], ""], Deserializer.deserialize(byte_sequence, [:uint16, :uint16])
+	end
+
+	def test_two_uint16_2
+		max_value = 1 << 16 - 1
+		byte_sequence = [max_value, max_value].pack('n')
+		rest = byte_sequence.slice(2..byte_sequence.size)
+		assert_equal [[max_value], rest], Deserializer.deserialize(byte_sequence, [:uint16])
 	end
 end
