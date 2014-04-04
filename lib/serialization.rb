@@ -101,6 +101,17 @@ module Deserializer
 		end
 	end
 
+	# Opertion is well defined for a Integer or a [Integer]
+	def self.uint32 byte_sequence
+		raise ArgumentError, "First argument doesn't respond to to_a" unless byte_sequence.respond_to? :to_a
+		byte_sequence = byte_sequence.to_a
+
+		if byte_sequence.size >= 4
+			[byte_sequence.take(4).join.unpack('N').first, byte_sequence.drop(4)]
+		else
+			[nil, byte_sequence]
+		end
+	end
 
 	# byte_sequnce -> [deserialized : String, rest : String]
 	def self.utf8 byte_sequence
