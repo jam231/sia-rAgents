@@ -1,5 +1,6 @@
 # encoding: utf-8
 
+require_relative 'test_helper.rb'
 require_relative '../lib/serialization.rb'
 require 'test/unit'
 
