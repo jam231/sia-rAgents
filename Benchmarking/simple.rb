@@ -5,29 +5,27 @@ require 'eventmachine'
 
 require_relative '../lib/serialization.rb'
 
-include Serializer
-
 def get_my_orders
-  serialize [3, 0x1f], [:uint16, :uint8]
+  Serializer.serialize [3, 0x1f], [:uint16, :uint8]
 end
 
 def get_my_stocks
-  serialize [3, 0x1d], [:uint16, :uint8]
+  Serializer.serialize [3, 0x1d], [:uint16, :uint8]
 end
 
 def register_me(psswd)
-  psswd = serialize [psswd], [:utf8]
-  request_length = 2 + 1 + 2 + psswd.size
+  psswd = Serializer.serialize [psswd], [:utf8]
+  request_length = 2 + 1 + psswd.bytesize
 
-  partial = serialize [request_length, 0x4, psswd.size], [:uint16, :uint8, :uint16]
+  partial = Serializer.serialize [request_length, 0x0], [:uint16, :uint8]
   [partial, psswd].join
 end
 
 def login_me(userid, psswd)
-  psswd = serialize [psswd], [:utf8]
-  request_length = 2 + 1 + 4 + 2 + psswd.size
+  psswd = Serializer.serialize [psswd], [:utf8]
+  request_length = 2 + 1 + 4 + psswd.bytesize
 
-  partial = serialize [request_length, 0x4, userid, psswd.size], [:uint16, :uint8, :uint32, :uint16]
+  partial = Serializer.serialize [request_length, 0x4, userid], [:uint16, :uint8, :uint32]
   [partial, psswd].join
 end
 
@@ -57,6 +55,7 @@ class TestAgent < EM::Connection
   end
 
   def post_init
+    send_data register_me "ąąąąą"
     puts "User(#{@user_id}) with password(#{@password})"
     send_data login_me(@user_id, @password)
     @timestamp = Time.now
@@ -72,12 +71,12 @@ class TestAgent < EM::Connection
   end
 end
 
-EventMachine.threadpool_size = 8
+EventMachine.threadpool_size = 4
 
 
 simulation_timestamp = Time.now
-agents_count = 7000
-request_count = 100
+agents_count = 3000
+request_count = 300
 
 connections = []
 
@@ -86,7 +85,7 @@ EventMachine.run do
 	Signal.trap("TERM")  { EventMachine.stop }
   EventMachine.add_shutdown_hook { puts "Closing simulation."}
   agents_count.times do |i|
-    connections << EventMachine::connect('192.168.0.6', 12345, TestAgent, i + 10, 'aaaaa', request_count)
+    connections << EventMachine::connect('192.168.0.6', 12345, TestAgent, i + 10, "ąąąąą", request_count)
 	end
   
   EventMachine.add_periodic_timer 1 do 
