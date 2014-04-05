@@ -46,8 +46,8 @@ module Serializer
 	def self.utf8 values
 		values = [values] unless values.kind_of? Array
 		values.map do |str|
-			raise ArgumentError, "Not a String" unless str.kind_of? String 
-			serialized = str.force_encoding('utf-8')
+			raise ArgumentError, "Not a String" unless str.kind_of? String
+			serialized = str.encode('utf-8').force_encoding('ASCII-8BIT')
 			[uint16(serialized.bytesize), serialized].join
 		end
 	end
