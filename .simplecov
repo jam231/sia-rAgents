@@ -7,3 +7,5 @@ SimpleCov.start do
    # Exclude Benchmarking dir from simplecov and coveralls statistics
    add_filter 'Benchmarking/'
 end
+
+Coveralls.wear!
