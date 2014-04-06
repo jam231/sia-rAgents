@@ -3,35 +3,12 @@
 
 require 'eventmachine'
 
-require_relative '../lib/serialization.rb'
+require_relative '../lib/protocol.rb'
 
-def get_my_orders
-  Serializer.serialize [3, 0x1f], [:uint16, :uint8]
-end
-
-def get_my_stocks
-  Serializer.serialize [3, 0x1d], [:uint16, :uint8]
-end
-
-def register_me(psswd)
-  psswd = Serializer.serialize [psswd], [:utf8]
-  request_length = 2 + 1 + psswd.bytesize
-
-  partial = Serializer.serialize [request_length, 0x0], [:uint16, :uint8]
-  [partial, psswd].join
-end
-
-def login_me(userid, psswd)
-  psswd = Serializer.serialize [psswd], [:utf8]
-  request_length = 2 + 1 + 4 + psswd.bytesize
-
-  partial = Serializer.serialize [request_length, 0x4, userid], [:uint16, :uint8, :uint32]
-  [partial, psswd].join
-end
-
-# Sia agent
 class TestAgent < EM::Connection
-  
+  include Requests  
+  include Responses
+
   def initialize(user_id, password, max_requests)
     @max_requests = max_requests
     @received = 0
@@ -45,8 +22,14 @@ class TestAgent < EM::Connection
   end
 
   def receive_data data
-    puts "I (id = #{@user_id}) got some sweet data... #{data.inspect} ...after #{(Time.now - @timestamp ) * 1000} ms."
-    send_data get_my_orders
+    responses = []
+    loop do 
+      response, data = from_data data
+      break if [:not_enough_bytes, :response_dropped].include? response 
+      responses << response
+    end 
+    puts "I (id = #{@user_id}) got some sweet data... #{responses} ...after #{(Time.now - @timestamp ) * 1000} ms."
+    send_data get_my_stocks
 
     @timestamp = Time.now
     @received += 1  
@@ -55,7 +38,7 @@ class TestAgent < EM::Connection
   end
 
   def post_init
-    send_data register_me "ąąąąą"
+    #send_data register_me @password
     puts "User(#{@user_id}) with password(#{@password})"
     send_data login_me(@user_id, @password)
     @timestamp = Time.now
@@ -72,11 +55,12 @@ class TestAgent < EM::Connection
 end
 
 EventMachine.threadpool_size = 4
-
+# On systems without epoll its a no-op.
+EventMachine.epoll
 
 simulation_timestamp = Time.now
-agents_count = 3000
-request_count = 300
+agents_count = 5000
+request_count = 200
 
 connections = []
 
@@ -85,7 +69,7 @@ EventMachine.run do
 	Signal.trap("TERM")  { EventMachine.stop }
   EventMachine.add_shutdown_hook { puts "Closing simulation."}
   agents_count.times do |i|
-    connections << EventMachine::connect('192.168.0.6', 12345, TestAgent, i + 10, "ąąąąą", request_count)
+    connections << EventMachine::connect('localhost', 12345, TestAgent, i + 10, "ąąąąą", request_count)
 	end
   
   EventMachine.add_periodic_timer 1 do 
