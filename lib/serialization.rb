@@ -3,6 +3,10 @@
 module Serializer
 	@supported_types = [:uint8, :uint16, :uint32, :utf8]
 
+	def serialize values, types
+		Serializer.serialize values, types
+	end
+
 	def self.serialize values, types
 		values = [values] unless values.kind_of? Array
 		types = [types] unless types.kind_of? Array
@@ -56,6 +60,10 @@ end
 
 module Deserializer
 	@supported_types = [:uint8, :uint16, :uint32, :utf8]
+
+	def deserialize byte_sequence, types
+		Deserializer.deserialize byte_sequence, types
+	end		
 
 	# bytes_sequence : String, types : [Symbols] -> [values_arr, rest : String]
 	def self.deserialize byte_sequence, types
