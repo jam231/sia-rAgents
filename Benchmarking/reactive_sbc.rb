@@ -16,6 +16,7 @@ class TestAgent < EM::Connection
     @active = false
     @user_id = user_id
     @password = password
+    @money = 0
     super 
   end
 
@@ -27,14 +28,22 @@ class TestAgent < EM::Connection
     responses = gather_responses data
     @received += responses.size  
     process_responses responses
-  
+    
+    close_connection if @received >= @max_requests
+
     #puts "I (user#{@user_id}) received some data...after #{(Time.now - @timestamp ) * 1000} ms."
-    if (@user_id + @received).even?
-      queue_request :sell_stock, {:stock_id => 3, :amount => 1, :price => 1}
-      send_data sell_stock 3,1,1
+    stock_id, amount, price = 2,1,1
+    if (@user_id + @received).even? and 
+      queue_request :sell_stock, {:stock_id => stock_id, :amount => amount, :price => price}
+      send_data sell_stock stock_id, amount, price
+    elsif @money > 0
+      queue_request :buy_stock, {:stock_id => stock_id, :amount => amount, :price => price}
+      money -= amount * price
+      send_data buy_stock stock_id, amount, price
+      close_connection
     else
-      queue_request :buy_stock, {:stock_id => 3, :amount => 1, :price => 1}
-      send_data buy_stock 3,1,1
+      puts "user({@user_id) - no money and no stock(#{stock_id})."
+      get_my_stocks
     end
     unless @orders.empty?
         order_id = @orders.first.first
@@ -45,11 +54,13 @@ class TestAgent < EM::Connection
         send_data cancel_order(order_id)
     end
     @timestamp = Time.now
-    close_connection if @received >= @max_requests
   end
 
   def post_init
-    #10.times { send_data register_me @password }
+    # 10.times do 
+    #   queue_request :register_me, {:password => @password}
+    #   send_data register_me @password
+    # end
     puts "User(#{@user_id}) with password(#{@password})"
     queue_request :login_me, {:user_id => @user_id, :password => @password}
     send_data login_me(@user_id, @password)
@@ -83,13 +94,13 @@ class TestAgent < EM::Connection
     end
 end
 
-EventMachine.threadpool_size = 6
+EventMachine.threadpool_size = 10
 # On systems without epoll its a no-op.
 EventMachine.epoll
 
 simulation_timestamp = Time.now
-agents_count = 5
-request_count = 5
+agents_count = 20
+request_count = 100
 connections = []
 
 EventMachine.run do
@@ -97,7 +108,7 @@ EventMachine.run do
 	Signal.trap("TERM")  { EventMachine.stop }
   EventMachine.add_shutdown_hook { puts "Closing simulation."}
   agents_count.times do |i|
-    connections << EventMachine::connect('localhost', 12345, TestAgent, i + 10, "ąąąąą", request_count)
+    connections << EventMachine::connect('192.168.0.7', 12345, TestAgent, i + 10, "ąąąąą", request_count)
 	end
   
   EventMachine.add_periodic_timer 1 do 
