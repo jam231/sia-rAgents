@@ -55,13 +55,13 @@ module MessagingHelper
   end
 
   def on_order_accepted(data)
+    p data
     order_id = data[:order_id]
     if @orders.include? order_id
       puts "user(#{@user_id}) - order #{order_id} have already been included."
     else
       puts "user(#{user_id}) - message queue is empty!." if @message_queue.empty?
-      message = @message_queue.pop
-      order_body = message[1]
+      order_body = @message_queue.shift[1]
       @orders.merge! order_id => order_body
     end
     puts "user(#{@user_id}) - order(#{message}) accepted. order_id(#{data[:order_id]})"
@@ -103,13 +103,13 @@ module MessagingHelper
   end
   
   def on_fail(data)
-    message = @message_queue.pop
+    message = @message_queue.shift
     puts "user(#{@user_id}) - message #{message} have failed with #{data}."
   end
 
   def on_ok(data)
     puts "user(#{@user_id}) - message queue is empty!." if @message_queue.empty?
-    message = @message_queue.pop
+    message = @message_queue.shift
     #canceled successfuly, now you can delete the order from orders.
     if message.first == :cancel_order
       @orders.delete(message[1][:order_id])
@@ -117,9 +117,10 @@ module MessagingHelper
     puts "user(#{@user_id}) -  ok - #{message.first}"
   end
 
-  def on_order_successful(data)
-    body = @message_queue.pop
-    puts "Registered user(#{body[:user_id]})." 
+  def on_register_successful(data)
+    body = @message_queue.shift[1]
+    p data
+    puts "Registered user(#{data[:user_id].first})." 
   end
 
   def on_default_message(data)
