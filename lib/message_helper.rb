@@ -55,16 +55,16 @@ module MessagingHelper
   end
 
   def on_order_accepted(data)
-    p data
     order_id = data[:order_id]
     if @orders.include? order_id
       puts "user(#{@user_id}) - order #{order_id} have already been included."
     else
       puts "user(#{user_id}) - message queue is empty!." if @message_queue.empty?
-      order_body = @message_queue.shift[1]
+      message = @message_queue.shift
+      order_body = message[1]
       @orders.merge! order_id => order_body
     end
-    puts "user(#{@user_id}) - order(#{message}) accepted. order_id(#{data[:order_id]})"
+    puts "user(#{@user_id}) - order(#{order_body}) accepted. order_id(#{data[:order_id]})"
   end
 
   def on_order_change(data)
@@ -94,7 +94,6 @@ module MessagingHelper
 
   def on_list_of_orders(data)
     @orders.clear
-    
     data[:orders].each do |order|
       @orders[order[:order_id]] = order.delete_if { |key| key == :order_id }
     end
@@ -119,7 +118,6 @@ module MessagingHelper
 
   def on_register_successful(data)
     body = @message_queue.shift[1]
-    p data
     puts "Registered user(#{data[:user_id].first})." 
   end
 

@@ -66,7 +66,6 @@ module SiaNetworkProtocol
 					end
 
 					if values.size == fields.size
-						p values
 						[[name, Hash[fields.zip(values)]], rest_of_data]
 					else
 						[:not_enough_bytes, data]
