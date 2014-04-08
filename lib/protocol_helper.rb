@@ -62,10 +62,11 @@ module SiaNetworkProtocol
 						value, rest_of_data = if custom.nil? then deserialize data, type 
 											  				 else custom.call(data) end
 						break if value.empty?
-						values << value
+						values += value
 					end
 
 					if values.size == fields.size
+						p values
 						[[name, Hash[fields.zip(values)]], rest_of_data]
 					else
 						[:not_enough_bytes, data]
