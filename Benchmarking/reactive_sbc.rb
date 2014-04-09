@@ -83,6 +83,16 @@ class TestAgent < EM::Connection
     end
   end
 
+  def on_order_change(data)
+    super
+
+    unless @orders.include? data[:order_id]
+      # Notification order have been distrubed, so server must pay the penalty... 
+      queue_request :get_my_orders
+      queue_request :get_my_stocks
+    end
+  end
+
   private
 
     def gather_responses(data)
@@ -105,8 +115,8 @@ EventMachine.threadpool_size = 1
 EventMachine.epoll
 
 simulation_timestamp = Time.now
-agents_count = 10
-request_count = 20
+agents_count = 50
+request_count = 100
 connections = []
 
 EventMachine.run do
@@ -117,7 +127,7 @@ EventMachine.run do
     connections << EventMachine::connect('localhost', 12345, TestAgent, i + 2, "ąąąąą", request_count)
 	end
   
-  EventMachine.add_periodic_timer 1 do 
+  EventMachine.add_periodic_timer 0.1 do 
     EventMachine.stop unless connections.any?(&:active?)
     puts "Active connections: #{connections.count(&:active?)}."
   end

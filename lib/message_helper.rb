@@ -82,10 +82,6 @@ module MessagingHelper
 
   def on_order_completed(data)
     order_id = data[:order_id]
-    order = @orders[order_id]
-    @money += data[:price] * amount_difference if order[:order_type] == 2 #SELL 
-    @stocks[data[:stock_id]] += amount_difference if order[:order_type] == 1 # BUY 
-    
     @orders.delete(order_id)
     puts "user(#{@user_id}) - order(#{order_id}) has completed."
     puts "user(#{@user_id}) - remaining orders count = #{@orders.size}."
