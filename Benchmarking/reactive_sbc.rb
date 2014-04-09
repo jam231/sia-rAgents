@@ -12,14 +12,15 @@ class TestAgent < EM::Connection
 
 
   def initialize(user_id, password, max_requests)
+    super
     @max_requests = max_requests
     @received = 0
     @active = false
     @user_id = user_id
     @password = password
     @money = 0
-    @buffer = ""
-    super 
+    @log.level = Logger::FATAL
+    @buffer = "" 
   end
 
   def connection_completed
@@ -55,7 +56,7 @@ class TestAgent < EM::Connection
   def post_init
     #10.times { queue_request :register_me, {:password => @password} } 
 
-    puts "User(#{@user_id}) with password(#{@password})"
+    @log.info "User(#{@user_id}) with password(#{@password})"
     queue_request :login_me, {:user_id => @user_id, :password => @password}
 
     queue_request :get_my_orders
@@ -110,13 +111,13 @@ class TestAgent < EM::Connection
     end
 end
 
-EventMachine.threadpool_size = 1
+EventMachine.threadpool_size = 20
 # On systems without epoll its a no-op.
 EventMachine.epoll
 
 simulation_timestamp = Time.now
-agents_count = 50
-request_count = 100
+agents_count = 1000
+request_count = 200
 connections = []
 
 EventMachine.run do
@@ -124,7 +125,7 @@ EventMachine.run do
 	Signal.trap("TERM")  { EventMachine.stop }
   EventMachine.add_shutdown_hook { puts "Closing simulation."}
   agents_count.times do |i|
-    connections << EventMachine::connect('localhost', 12345, TestAgent, i + 2, "ąąąąą", request_count)
+    connections << EventMachine::connect('192.168.0.3', 12345, TestAgent, i + 2, "ąąąąą", request_count)
 	end
   
   EventMachine.add_periodic_timer 0.1 do 
