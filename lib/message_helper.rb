@@ -74,12 +74,15 @@ module MessagingHelper
   def on_order_change(data)
     order_id = data[:order_id]
     amount_difference = data[:amount]
-    #price = data[:price] 
+    price = data[:price] 
+    stock_id = data[:stock_id]
     @log.info "user(#{@user_id}) - order(#{order_id}) has changed."
     if @orders.include? order_id 
       @orders[order_id][:amount] -= amount_difference
+      @money ||= 0
       @money += data[:price] * amount_difference if @orders[order_id][:order_type] == 2 #SELL 
-      @stocks[data[:stock_id]] += amount_difference if @orders[order_id][:order_type] == 1 # BUY 
+      @stocks[stock_id] ||= 0
+      @stocks[stock_id] += amount_difference if @orders[order_id][:order_type] == 1 # BUY 
     else 
       @log.warn "user(#{@user_id}) - order not on the list!."
     end
