@@ -59,8 +59,8 @@ module SiaNetworkProtocol
 					values, rest_of_data = [], data
 					fields_types.each do |type| 
 						custom = @@custom_deserializers[type]
-						value, rest_of_data = if custom.nil? then deserialize data, type 
-											  				 else custom.call(data) end
+						value, rest_of_data = if custom.nil? then deserialize rest_of_data, type 
+											  				 else custom.call rest_of_data end
 						value = value.first if custom.nil? and value.size == 1
 						values << value
 					end
