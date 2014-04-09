@@ -61,8 +61,8 @@ module SiaNetworkProtocol
 						custom = @@custom_deserializers[type]
 						value, rest_of_data = if custom.nil? then deserialize data, type 
 											  				 else custom.call(data) end
-						break if value.empty?
-						values += value
+						value = value.first if custom.nil? and value.size == 1
+						values << value
 					end
 
 					if values.size == fields.size
@@ -107,8 +107,8 @@ module SiaNetworkProtocol
 					truncated_data = drop_bytes(data, length)
 					response = :response_dropped
 
-					type, rest = deserialize rest, :uint8
-					response, _ = send(@@response_deserializers[type.first], rest)
+					(type, _), rest = deserialize rest, :uint8
+					response, _ = send(@@response_deserializers[type], rest) unless type.nil?
 					response = :response_dropped if response == :not_enough_bytes
 					
 					[response, truncated_data]

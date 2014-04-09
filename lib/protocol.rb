@@ -43,13 +43,13 @@ define_responses("Responses") do |responses|
 	#...
 
 	custom_deserializer_for responses, :list_of_orders do |data|
-		obj_count, rest = Deserializer.deserialize data, :uint16
-		if obj_count.empty? or rest.bytesize < (obj_count.first * 17)	# single order data is 17 bytes long
+		(obj_count, _), rest = Deserializer.deserialize data, :uint16
+		if obj_count.nil? or rest.bytesize < (obj_count * 17)	# single order data is 17 bytes long
 			[:response_dropped, data]
 		else
 			orders = []
 			order_fields = [:order_id, :order_type, :stock_id, :amount, :price]
-			obj_count.first.times do 
+			obj_count.times do
 				order_values, rest = Deserializer.deserialize rest, [:uint32, :uint8, :uint32, :uint32, :uint32] 
 				orders << Hash[order_fields.zip(order_values)] 
 			end
@@ -58,13 +58,13 @@ define_responses("Responses") do |responses|
 	end
 
 	custom_deserializer_for responses, :list_of_stocks do |data|
-		obj_count, rest = Deserializer.deserialize data, :uint16
-		if obj_count.empty? or rest.bytesize < (obj_count.first * 8)	# single stock list entry is 8 bytes long
+		(obj_count, _), rest = Deserializer.deserialize data, :uint16
+		if obj_count.nil? or rest.bytesize < (obj_count * 8)	# single stock list entry is 8 bytes long
 			[:response_dropped, data]
 		else
 			user_stocks = []
 			stock_fields = [:stock_id, :amount]
-			obj_count.first.times do 
+			obj_count.times do 
 				stock_values, rest = Deserializer.deserialize rest, [:uint32, :uint32] 
 				user_stocks << Hash[stock_fields.zip(stock_values)] 
 			end
