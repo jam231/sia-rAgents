@@ -16,7 +16,6 @@ module MessagingHelper
     include Responses
 
   def initialize(*args, &block)
-    puts "fdfsfd"
     @message_queue = []
     @stocks = {}
     @orders = {}
@@ -24,8 +23,8 @@ module MessagingHelper
   end
 
   # name=symbol, body={field_name=symbol => value}
-  def queue_request(name, body)
-    @message_queue << [name, body];
+  def queue_request(name, body=nil)
+    @message_queue << [name, body].compact;
   end
 
   # responses=[name=symbol, body={field_name=symbol => value}]
@@ -55,16 +54,16 @@ module MessagingHelper
   end
 
   def on_order_accepted(data)
+    puts "user(#{@user_id}) - message queue is empty!." if @message_queue.empty?
+    message = @message_queue.shift
     order_id = data[:order_id]
     if @orders.include? order_id
       puts "user(#{@user_id}) - order #{order_id} have already been included."
     else
-      puts "user(#{user_id}) - message queue is empty!." if @message_queue.empty?
-      message = @message_queue.shift
       order_body = message[1]
       @orders.merge! order_id => order_body
     end
-    puts "user(#{@user_id}) - order(#{order_body}) accepted. order_id(#{data[:order_id]})"
+    puts "user(#{@user_id}) - order(#{message}) accepted. order_id(#{data[:order_id]})"
   end
 
   def on_order_change(data)
@@ -82,6 +81,8 @@ module MessagingHelper
   end
 
   def on_list_of_stocks(data)                      
+    @message_queue.shift
+    @stocks.clear
     data[:stocks].each do |stock|
     	if stock[:stock_id] == 1
     		@money = stock[:stock_id]
@@ -90,9 +91,11 @@ module MessagingHelper
 		end
     end
     puts "user(#{@user_id}) - owned stocks count = #{@stocks.size}."
+    puts "user(#{@user_id}) - money = #{@money}."
   end
 
   def on_list_of_orders(data)
+    @message_queue.shift
     @orders.clear
     data[:orders].each do |order|
       @orders[order[:order_id]] = order.delete_if { |key| key == :order_id }
@@ -118,7 +121,7 @@ module MessagingHelper
 
   def on_register_successful(data)
     body = @message_queue.shift[1]
-    puts "Registered user(#{data[:user_id].first})." 
+    puts "Registered user(#{data[:user_id]})." 
   end
 
   def on_default_message(data)
