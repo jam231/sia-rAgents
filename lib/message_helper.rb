@@ -75,11 +75,11 @@ module MessagingHelper
     order_id = data[:order_id]
     amount_difference = data[:amount]
     #price = data[:price] 
-    @log.info "user(#{@user_id}) - order #{order_id} changed."
+    @log.info "user(#{@user_id}) - order(#{order_id}) has changed."
     if @orders.include? order_id 
-      @orders[:order_id][:amount] -= amount_difference
-      @money += data[:price] * amount_difference if @orders[:order_id][:order_type] == 2 #SELL 
-      @stocks[data[:stock_id]] += amount_difference if @orders[:order_id][:order_type] == 1 # BUY 
+      @orders[order_id][:amount] -= amount_difference
+      @money += data[:price] * amount_difference if @orders[order_id][:order_type] == 2 #SELL 
+      @stocks[data[:stock_id]] += amount_difference if @orders[order_id][:order_type] == 1 # BUY 
     else 
       @log.warn "user(#{@user_id}) - order not on the list!."
     end
@@ -138,5 +138,43 @@ module MessagingHelper
 
   def on_default_message(data)
     @log.warn "user(#{@user_id}) - something else #{name} - #{payload}"     
+  end
+end
+
+
+module MessagingHelperEM
+  include MessagingHelper
+
+
+  def initialize(*args, &block)
+    super
+    @buffer = ""
+    yield if block_given?
+  end 
+
+
+  def queue_request(name, args=nil)
+    super
+    # From Ruby docs about Hash:
+    # 'Hashes enumerate their values in the order that the corresponding keys were inserted.'
+    unless args.nil?
+      send_data send(name, *args.values)
+    else 
+      send_data send(name)
+    end
+  end
+
+  def gather_responses(data)
+    data = [@buffer, data].join
+    responses = []
+    loop do 
+      response, data = from_data data
+      if :not_enough_bytes == response 
+        @buffer = data
+        break
+      end
+      responses << response unless response == :response_dropped
+    end
+    responses
   end
 end

@@ -8,7 +8,7 @@ require_relative '../lib/message_helper.rb'
 
 class TestAgent < EM::Connection
   include Requests   
-  include MessagingHelper
+  include MessagingHelperEM
 
 
   def initialize(user_id, password, max_requests)
@@ -19,8 +19,7 @@ class TestAgent < EM::Connection
     @user_id = user_id
     @password = password
     @money = 0
-    @log.level = Logger::FATAL
-    @buffer = "" 
+    @log.level = Logger::INFO
   end
 
   def connection_completed
@@ -61,6 +60,7 @@ class TestAgent < EM::Connection
 
     queue_request :get_my_orders
     queue_request :get_my_stocks
+
     @timestamp = Time.now
   end
 
@@ -73,17 +73,6 @@ class TestAgent < EM::Connection
     @active
   end
 
-  def queue_request(name, args=nil)
-    super
-    # From Ruby docs about Hash:
-    # 'Hashes enumerate their values in the order that the corresponding keys were inserted.'
-    unless args.nil?
-      send_data send(name, *args.values)
-    else 
-      send_data send(name)
-    end
-  end
-
   def on_order_change(data)
     super
 
@@ -93,22 +82,6 @@ class TestAgent < EM::Connection
       queue_request :get_my_stocks
     end
   end
-
-  private
-
-    def gather_responses(data)
-      data = [@buffer, data].join
-      responses = []
-      loop do 
-        response, data = from_data data
-        if :not_enough_bytes == response 
-          @buffer = data
-          break
-        end
-        responses << response unless response == :response_dropped
-      end
-      responses
-    end
 end
 
 EventMachine.threadpool_size = 20
@@ -116,7 +89,7 @@ EventMachine.threadpool_size = 20
 EventMachine.epoll
 
 simulation_timestamp = Time.now
-agents_count = 1000
+agents_count = 500
 request_count = 200
 connections = []
 
