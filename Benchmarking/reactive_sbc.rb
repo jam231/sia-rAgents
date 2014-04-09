@@ -40,14 +40,13 @@ class TestAgent < EM::Connection
     elsif @money > 0
       queue_request :buy_stock, {:stock_id => stock_id, :amount => amount, :price => price}
       @money -= amount * price
-      close_connection
     elsif not @orders.empty?
         order_id = @orders.first.first
         queue_request :cancel_order, {:order_id => order_id}
   
         @orders.delete(order_id)
     else
-      get_my_stocks
+      get_my_stocks 
     end
     
     @timestamp = Time.now

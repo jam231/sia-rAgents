@@ -71,24 +71,35 @@ module MessagingHelper
     amount_difference = data[:amount]
     #price = data[:price] 
     puts "user(#{@user_id}) - order #{order_id} changed."
-    puts "user(#{@user_id}) - order not on the list!." if not @orders.include? order_id
-    @orders[:order_id][:amount] -= amount_difference
+    if @orders.include? order_id 
+      @orders[:order_id][:amount] -= amount_difference
+      @money += data[:price] * amount_difference if @orders[:order_id][:order_type] == 2 #SELL 
+      @stocks[data[:stock_id]] += amount_difference if @orders[:order_id][:order_type] == 1 # BUY 
+    else 
+      puts "user(#{@user_id}) - order not on the list!."
+    end
   end
 
   def on_order_completed(data)
-    @orders.delete(data[:order_id])
-    puts "user(#{@user_id}) - remaining orders count #{@orders.size} completed."
+    order_id = data[:order_id]
+    order = @orders[order_id]
+    @money += data[:price] * amount_difference if order[:order_type] == 2 #SELL 
+    @stocks[data[:stock_id]] += amount_difference if order[:order_type] == 1 # BUY 
+    
+    @orders.delete(order_id)
+    puts "user(#{@user_id}) - order(#{order_id}) has completed."
+    puts "user(#{@user_id}) - remaining orders count = #{@orders.size}."
   end
 
   def on_list_of_stocks(data)                      
     @message_queue.shift
     @stocks.clear
     data[:stocks].each do |stock|
-    	if stock[:stock_id] == 1
-    		@money = stock[:amount]
-    	else
-			@stocks[stock[:stock_id]] = stock.delete_if { |key| key == :stock_id }
-		end
+      if stock[:stock_id] == 1
+    	 	@money = stock[:amount]
+      else
+			 @stocks[stock[:stock_id]] = stock.delete_if { |key| key == :stock_id }
+		  end
     end
     puts "user(#{@user_id}) - owned stocks count = #{@stocks.size}."
     puts "user(#{@user_id}) - money = #{@money}."
