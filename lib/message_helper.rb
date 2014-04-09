@@ -85,7 +85,7 @@ module MessagingHelper
     @stocks.clear
     data[:stocks].each do |stock|
     	if stock[:stock_id] == 1
-    		@money = stock[:stock_id]
+    		@money = stock[:amount]
     	else
 			@stocks[stock[:stock_id]] = stock.delete_if { |key| key == :stock_id }
 		end
