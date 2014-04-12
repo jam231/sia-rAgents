@@ -128,8 +128,25 @@ module MessagingHelper
     @log.fatal "user(#{@user_id}) - message queue is empty!." if @message_queue.empty?
     message = @message_queue.shift
     #canceled successfuly, now you can delete the order from orders.
+    ## FIXME: Clean it
     if message.first == :cancel_order
-      @orders.delete(message[1][:order_id])
+      order_id = message[1][:order_id]
+      # If canceled order was buy order then return frozen money
+      @money += @orders[order_id][:amount] * @orders[order_id][:price] if @orders[order_id][:order_type] == 1
+      # If canceled order was sell order then return frozen stocks
+      @stocks[@orders[order_id][:stock_id]] += @orders[order_id][:amount] if @orders[order_id][:order_type] == 2
+      @orders.delete(order_id)
+    elsif message.first == :sell_order
+      body = message[1]
+      @orders.merge! data[:order_id] => (body.merge! :order_type => 2)
+      # Market substracts (secures) from you available stocks the amount you want to sell 
+      @stocks[body[:stock_id]] -= body[:amount]
+      @stocks.delete(body[:stock_id]) unless @stocks[body[:stock_id]] > 0
+    elsif message.first == :buy_order
+      body = message[1]
+      @orders.merge! data[:order_id] => (body.merge! :order_type => 1)
+      # Market substracts (secures) money needed for the purchaise.
+      @money -= body[:amount] * body[:price]
     end   
     @log.debug "user(#{@user_id}) -  ok - #{message.first}"
   end
