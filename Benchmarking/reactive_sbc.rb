@@ -46,7 +46,7 @@ class TestAgent < EM::Connection
   
         @orders.delete(order_id)
     else
-      get_my_stocks 
+      queue_request :get_my_stocks 
     end
     
     @timestamp = Time.now
@@ -89,8 +89,8 @@ EventMachine.threadpool_size = 20
 EventMachine.epoll
 
 simulation_timestamp = Time.now
-agents_count = 500
-request_count = 200
+agents_count = 1000
+request_count = 100
 connections = []
 
 EventMachine.run do
