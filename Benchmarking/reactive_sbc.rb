@@ -14,12 +14,12 @@ class TestAgent < EM::Connection
   def initialize(user_id, password, max_requests)
     super
     @max_requests = max_requests
-    @received = 0
+    @sent = 0
     @active = false
     @user_id = user_id
     @password = password
     @money = 0
-    @log.level = Logger::INFO
+    @log.level = Logger::DEBUG
   end
 
   def connection_completed
@@ -28,11 +28,9 @@ class TestAgent < EM::Connection
 
   def receive_data data
     responses = gather_responses data
-    @received += responses.size  
     process_responses responses
 
-    close_connection if @received >= @max_requests
-
+    close_connection if @sent >= @max_requests
     #puts "I (user#{@user_id}) received some data...after #{(Time.now - @timestamp ) * 1000} ms."
     stock_id, amount, price = 2,1,1
     if @stocks.include? stock_id and rand(2).even?
@@ -41,15 +39,15 @@ class TestAgent < EM::Connection
       queue_request :buy_stock, {:stock_id => stock_id, :amount => amount, :price => price}
       @money -= amount * price
     elsif not @orders.empty?
-        order_id = @orders.first.first
+        order_id = @orders.first[:order_id]
         queue_request :cancel_order, {:order_id => order_id}
   
         @orders.delete(order_id)
     else
       queue_request :get_my_stocks 
-    end
-    
+    end    
     @timestamp = Time.now
+    @sent += 1
   end
 
   def post_init
@@ -84,12 +82,12 @@ class TestAgent < EM::Connection
   end
 end
 
-EventMachine.threadpool_size = 20
+EventMachine.threadpool_size = 10
 # On systems without epoll its a no-op.
 EventMachine.epoll
 
 simulation_timestamp = Time.now
-agents_count = 1000
+agents_count = 500
 request_count = 100
 connections = []
 
