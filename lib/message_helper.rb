@@ -11,13 +11,15 @@
 #
 
 require_relative 'protocol.rb'
+require_relative 'utils.rb'
+
 require 'logger'
 
 module MessagingHelper
     include Responses
 
   def initialize(*args, &block)
-    @message_queue = []
+    @message_queue = Utils::Queue.new 
 
     @log = Logger.new(STDOUT)
     @log.level = Logger::INFO
@@ -189,11 +191,14 @@ module MessagingHelperEM
     responses = []
     loop do 
       response, data = from_data data
-      if :not_enough_bytes == response 
+      if response == :not_enough_bytes 
         @buffer = data
         break
+      elsif response == :response_dropped
+        @log.debug "Dropped message..."
+      else
+        responses << response
       end
-      responses << response unless response == :response_dropped
     end
     responses
   end
