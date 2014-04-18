@@ -38,12 +38,14 @@ module MessagingHelper
   def process_responses(responses)
     responses.each do |name, payload|
       case name
-      when :order_completed
-        on_order_completed payload
       when :order_accepted
         on_order_accepted payload
+      when :order_completed
+        on_order_completed payload
       when :order_change
         on_order_change payload
+      when :stock_info
+        on_stock_info payload
       when :list_of_stocks
         on_list_of_stocks payload
       when :list_of_orders
@@ -121,6 +123,12 @@ module MessagingHelper
     @log.debug "user(#{@user_id}) - orders size = #{@orders.size}."
   end
   
+  def on_stock_info(data)
+    message = @message_queue.shift
+
+    @log.debug "user(#{@user_id}) - message (#{message}) => data received(#{data})."
+  end
+
   def on_fail(data)
     message = @message_queue.shift
     @log.debug "user(#{@user_id}) - message #{message} have failed with #{data}."
