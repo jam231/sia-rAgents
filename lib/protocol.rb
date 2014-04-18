@@ -34,18 +34,49 @@ define_responses("Responses") do |responses|
 							:body => [[:order_id, :uint32]]
 
 	response_for responses, :name => :show_best_order,:type => 0x1a, 
-							:body => [[:order_typr, :uint8], [:stock_id, :uint32], [:amount, :uint32], [:price, :uint32]]
+							:body => [[:order_type, :uint8], [:stock_id, :uint32], [:volume, :uint32], [:price, :uint32]]
+
+	response_for responses, :name => :show_no_best_order, :type => 0x25, 
+							:body => [[:order_type, :uint8],[:stock_id, :uint32]]
 
 	response_for responses, :name => :list_of_stocks, :type => 0x1e, :body => [[:stocks, :list_of_stocks]]
 	response_for responses, :name => :list_of_orders, :type => 0x20, :body => [[:orders, :list_of_orders]]
 	response_for responses, :name => :register_successful, :type => 0x1, :body => [[:user_id, :uint32]]
-	# This list is incomplete, there are couple messages not included here, but used (6-04-2014) by sia server.
-	#...
+
+	response_for responses, :name => :stock_info, :type => 0x22, 
+							:body => [[:stock_id, :uint32], [:best_buy_order, :best_order], [:best_sell_order, :best_order],
+									  [:last_transaction, :last_transaction]]
+
+	custom_deserializer_for responses, :best_order do |data|
+		(content_indicator, _), rest = Deserializer.deserialize data, :uint32
+		if content_indicator.nil? 
+			[:response_dropped, rest]
+		elsif content_indicator == 0 		# It indicates that there is no best order
+			[:nothing, rest]
+		else
+			best_order_fields = [:volume, :price]
+			best_order_values, rest = Deserializer.deserialize data, [:uint32, :uint32]
+			[Hash[best_order_fields.zip(best_order_values)], rest]
+		end
+	end
+
+	custom_deserializer_for responses, :last_transaction do |data|
+		(content_indicator, _), rest = Deserializer.deserialize data, :uint32
+		if content_indicator.nil? 
+			[:response_dropped, rest]
+		elsif content_indicator == 0 		# It indicates that there is last transaction
+			[:nothing, rest]
+		else
+			last_transaction_fields = [:amount, :price, :timestamp]
+			last_transaction_values, rest = Deserializer.deserialize data, [:uint32, :uint32, :utf8]
+			[Hash[last_transaction_fields.zip(last_transaction_values)], rest]
+		end
+	end
 
 	custom_deserializer_for responses, :list_of_orders do |data|
 		(obj_count, _), rest = Deserializer.deserialize data, :uint16
 		if obj_count.nil? or rest.bytesize < (obj_count * 17)	# single order data is 17 bytes long
-			[:response_dropped, data]
+			[:response_dropped, rest]
 		else
 			orders = []
 			order_fields = [:order_id, :order_type, :stock_id, :amount, :price]
@@ -60,7 +91,7 @@ define_responses("Responses") do |responses|
 	custom_deserializer_for responses, :list_of_stocks do |data|
 		(obj_count, _), rest = Deserializer.deserialize data, :uint16
 		if obj_count.nil? or rest.bytesize < (obj_count * 8)	# single stock list entry is 8 bytes long
-			[:response_dropped, data]
+			[:response_dropped, rest]
 		else
 			user_stocks = []
 			stock_fields = [:stock_id, :amount]
