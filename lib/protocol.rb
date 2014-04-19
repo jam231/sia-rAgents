@@ -4,6 +4,9 @@ require_relative 'protocol_helper.rb'
 # FIXME: This include below is ugly
 include SiaNetworkProtocol
 
+
+# https://github.com/jam231/sia/wiki/Protocol-spec
+
 define_requests("Requests") do |requests|
 	request_for requests, :name => :register_me, 	:type => 0x0, :body => [[:password, :utf8]]
 	request_for requests, :name => :login_me, 		:type => 0x4, 
@@ -37,7 +40,7 @@ define_responses("Responses") do |responses|
 							:body => [[:order_type, :uint8], [:stock_id, :uint32], [:volume, :uint32], [:price, :uint32]]
 
 	response_for responses, :name => :show_no_best_order, :type => 0x25, 
-							:body => [[:order_type, :uint8],[:stock_id, :uint32]]
+							:body => [[:order_type, :order_type],[:stock_id, :uint32]]
 
 	response_for responses, :name => :list_of_stocks, :type => 0x1e, :body => [[:stocks, :list_of_stocks]]
 	response_for responses, :name => :list_of_orders, :type => 0x20, :body => [[:orders, :list_of_orders]]
@@ -46,6 +49,22 @@ define_responses("Responses") do |responses|
 	response_for responses, :name => :stock_info, :type => 0x22, 
 							:body => [[:stock_id, :uint32], [:best_buy_order, :best_order], [:best_sell_order, :best_order],
 									  [:last_transaction, :last_transaction]]
+
+	custom_deserializer_for responses, :order_type do |data|
+		(type, _), rest = Deserializer.deserialize data, :uint8
+		if type.nil?
+			[:response_dropped, rest]
+		else
+			case type 	
+			when 0x1
+				[:sell_order, rest]
+			when 0x2
+				[:buy_order, rest]
+			else
+				[:unrecognized_type, rest]
+			end
+		end
+	end
 
 	custom_deserializer_for responses, :best_order do |data|
 		(content_indicator, _), rest = Deserializer.deserialize data, :uint32
