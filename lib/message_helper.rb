@@ -15,6 +15,7 @@ require_relative 'utils.rb'
 
 require 'logger'
 require 'set'
+require 'time'
 
 module MessagingHelper
     include Responses
@@ -28,6 +29,7 @@ module MessagingHelper
     @subscribed_stocks = Set.new
     @stocks = {}
     @orders = {}
+    @stock_info = {}
 
     yield if block_given?
   end
@@ -164,7 +166,10 @@ module MessagingHelper
 
     message =   @message_queue.shift
 
-    @log.debug "user(#{@user_id}) - message (#{message}) => data received(#{data})."
+    stock_id = data[:stock_id]
+    @stock_info.merge! stock_id => data.tap { |hash| hash.delete(:stock_id) }
+                                       .merge!(:timestamp => Time.now.utc.iso8601) 
+    @log.debug "user(#{@user_id}) - New stock_info(#{@stock_info[stock_id]}) data for stock(#{stock_id})."
   end
 
   def on_fail(data)
