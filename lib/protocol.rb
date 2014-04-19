@@ -100,7 +100,11 @@ define_responses("Responses") do |responses|
 			orders = []
 			order_fields = [:order_id, :order_type, :stock_id, :amount, :price]
 			obj_count.times do
-				order_values, rest = Deserializer.deserialize rest, [:uint32, :uint8, :uint32, :uint32, :uint32] 
+				(order_id, _), rest = Deserializer.deserialize rest, :uint32
+				order_type,    rest = custom_deserializers[:order_type].call rest
+				(stock_id, amount, price),  rest = Deserializer.deserialize rest, [:uint32, :uint32, :uint32]
+
+				order_values = [order_id, order_type, stock_id, amount, price]
 				orders << Hash[order_fields.zip(order_values)] 
 			end
 			[orders, rest]

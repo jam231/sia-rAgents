@@ -116,4 +116,10 @@ module SiaNetworkProtocol
 			end
 		end
 	end
+
+	private
+
+	def custom_deserializers
+		@@custom_deserializers.dup
+	end
 end
