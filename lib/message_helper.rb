@@ -14,6 +14,7 @@ require_relative 'protocol.rb'
 require_relative 'utils.rb'
 
 require 'logger'
+require 'set'
 
 module MessagingHelper
     include Responses
@@ -24,8 +25,10 @@ module MessagingHelper
     @log = Logger.new(STDOUT)
     @log.level = Logger::INFO
 
+    @subscribed_stocks = Set.new
     @stocks = {}
     @orders = {}
+
     yield if block_given?
   end
 
@@ -136,33 +139,36 @@ module MessagingHelper
 
   def on_ok(data)
     @log.fatal "user(#{@user_id}) - message queue is empty!." if @message_queue.empty?
-    message = @message_queue.shift
-    #canceled successfuly, now you can delete the order from orders.
+    message_name, message_body = @message_queue.shift
+    
     ## FIXME: Clean it
-    if message.first == :cancel_order
-      order_id = message[1][:order_id]
+
+    case message_name
+    when :cancel_order 
+      order_id        = message_body[:order_id]
+      canceled_order  = @orders[order_id]
       # If canceled order was buy order then return frozen money
-      @money += @orders[order_id][:amount] * @orders[order_id][:price] if @orders[order_id][:order_type] == 1
+      @money += canceled_order[:amount] * canceled_order[:price] if canceled_order[:order_type] == 1
       # If canceled order was sell order then return frozen stocks
-      @stocks[@orders[order_id][:stock_id]] += @orders[order_id][:amount] if @orders[order_id][:order_type] == 2
+      @stocks[canceled_order[:stock_id]] += canceled_order[:amount] if canceled_order[:order_type] == 2
       @orders.delete(order_id)
-    elsif message.first == :sell_order
-      body = message[1]
-      @orders.merge! data[:order_id] => (body.merge! :order_type => 2)
+    when :sell_order
+      @orders.merge! data[:order_id] => (message_body.merge! :order_type => 2)
       # Market substracts (secures) from you available stocks the amount you want to sell 
-      @stocks[body[:stock_id]] -= body[:amount]
-      @stocks.delete(body[:stock_id]) unless @stocks[body[:stock_id]] > 0
-    elsif message.first == :buy_order
-      body = message[1]
-      @orders.merge! data[:order_id] => (body.merge! :order_type => 1)
-      # Market substracts (secures) money needed for the purchaise.
-      @money -= body[:amount] * body[:price]
+      @stocks[message_body[:stock_id]] -= message_body[:amount]
+      @stocks.delete(message_body[:stock_id]) unless @stocks[message_body[:stock_id]] > 0
+    when :buy_order
+      @orders.merge! data[:order_id] => (message_body.merge! :order_type => 1)
+      # Market substracts (secures) money needed for the purchase.
+      @money -= message_body[:amount] * message_body[:price]
+    else
+      @log.warn "user(#{@user_id}) - confirmation for unrecognized requestt #{message_name}."
     end   
-    @log.debug "user(#{@user_id}) -  ok - #{message.first}"
+    @log.debug "user(#{@user_id}) -  confirmation for request #{message_name}."
   end
 
   def on_register_successful(data)
-    body = @message_queue.shift[1]
+    message_body = @message_queue.shift[1]
     @log.info "Registered user(#{data[:user_id]})." 
   end
 
