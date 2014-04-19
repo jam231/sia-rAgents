@@ -65,17 +65,18 @@ module MessagingHelper
     end
   end
 
-  def on_order_accepted(data)
+  def on_order_accepted(data)    
     @log.fatal "user(#{@user_id}) - message queue is empty!." if @message_queue.empty?
-    message = @message_queue.shift
+
+    _, order = @message_queue.shift
     order_id = data[:order_id]
+    
     if @orders.include? order_id
       @log.warn "user(#{@user_id}) - order #{order_id} have already been included."
     else
-      order_body = message[1]
-      @orders.merge! order_id => order_body
+      @orders.merge! order_id => order
     end
-    @log.info "user(#{@user_id}) - order(#{message}) accepted. order_id(#{data[:order_id]})"
+    @log.info "user(#{@user_id}) - order(#{order}) accepted. order_id(#{data[:order_id]})"
   end
 
   def on_order_change(data)
@@ -83,13 +84,16 @@ module MessagingHelper
     amount_difference = data[:amount]
     price = data[:price] 
     stock_id = data[:stock_id]
+    
     @log.info "user(#{@user_id}) - order(#{order_id}) has changed."
-    if @orders.include? order_id 
-      @orders[order_id][:amount] -= amount_difference
+    
+    if @orders.include? order_id
+      order_changed = @orders[order_id] 
+      order_changed[:amount] -= amount_difference
       @money ||= 0
-      @money += data[:price] * amount_difference if @orders[order_id][:order_type] == 2 #SELL 
+      @money += data[:price] * amount_difference if order_changed[:order_type] == 2 #SELL 
       @stocks[stock_id] ||= 0
-      @stocks[stock_id] += amount_difference if @orders[order_id][:order_type] == 1 # BUY 
+      @stocks[stock_id] += amount_difference if order_changed[:order_type] == 1 # BUY 
     else 
       @log.warn "user(#{@user_id}) - order not on the list!."
     end
@@ -102,9 +106,12 @@ module MessagingHelper
     @log.debug "user(#{@user_id}) - remaining orders count = #{@orders.size}."
   end
 
-  def on_list_of_stocks(data)                      
+  def on_list_of_stocks(data) 
+    @log.fatal "user(#{@user_id}) - message queue is empty!." if @message_queue.empty?
+                     
     @message_queue.shift
     @stocks.clear
+    
     data[:stocks].each do |stock|
       if stock[:stock_id] == 1
     	 	@money = stock[:amount]
@@ -112,13 +119,17 @@ module MessagingHelper
 			 @stocks[stock[:stock_id]] = stock.delete_if { |key| key == :stock_id }
 		  end
     end
+    
     @log.debug "user(#{@user_id}) - owned stocks count = #{@stocks.size}."
     @log.debug "user(#{@user_id}) - money = #{@money}."
   end
 
   def on_list_of_orders(data)
+    @log.fatal "user(#{@user_id}) - message queue is empty!." if @message_queue.empty?
+
     @message_queue.shift
     @orders.clear
+    
     data[:orders].each do |order|
       @orders[order[:order_id]] = order.delete_if { |key| key == :order_id }
     end
@@ -127,18 +138,23 @@ module MessagingHelper
   end
   
   def on_stock_info(data)
+    @log.fatal "user(#{@user_id}) - message queue is empty!." if @message_queue.empty?
+
     message = @message_queue.shift
 
     @log.debug "user(#{@user_id}) - message (#{message}) => data received(#{data})."
   end
 
   def on_fail(data)
+    @log.fatal "user(#{@user_id}) - message queue is empty!." if @message_queue.empty?
+
     message = @message_queue.shift
     @log.debug "user(#{@user_id}) - message #{message} have failed with #{data}."
   end
 
   def on_ok(data)
     @log.fatal "user(#{@user_id}) - message queue is empty!." if @message_queue.empty?
+
     message_name, message_body = @message_queue.shift
     
     ## FIXME: Clean it
@@ -168,7 +184,9 @@ module MessagingHelper
   end
 
   def on_register_successful(data)
-    message_body = @message_queue.shift[1]
+    @log.fatal "user(#{@user_id}) - message queue is empty!." if @message_queue.empty?
+
+    @message_queue.shift
     @log.info "Registered user(#{data[:user_id]})." 
   end
 
