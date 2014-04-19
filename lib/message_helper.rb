@@ -122,6 +122,7 @@ module MessagingHelper
   def on_order_completed(data)
     order_id = data[:order_id]
     @orders.delete(order_id)
+    
     @log.info "user(#{@user_id}) - order(#{order_id}) has completed."
     @log.debug "user(#{@user_id}) - remaining orders count = #{@orders.size}."
   end
@@ -141,7 +142,7 @@ module MessagingHelper
 		  end
     end
     
-    @log.debug "user(#{@user_id}) - owned stocks count = #{@stocks.size}."
+    @log.debug "user(#{@user_id}) - owned stocks(#{@stocks.size}) = #{@stocks}."
     @log.debug "user(#{@user_id}) - money = #{@money}."
   end
 
@@ -152,10 +153,10 @@ module MessagingHelper
     @orders.clear
     
     data[:orders].each do |order|
-      @orders.merge! order[:order_id] => order.delete(:order_id)
+      @orders.merge! order[:order_id] => order.tap { |hash| hash.delete(:order_id) }
     end
 
-    @log.debug "user(#{@user_id}) - orders size = #{@orders.size}."
+    @log.debug "user(#{@user_id}) - pending orders(#{@orders.size}) = #{@orders}."
   end
   
   def on_stock_info(data)
@@ -189,10 +190,15 @@ module MessagingHelper
       # If canceled order was sell order then return frozen stocks
       @stocks[canceled_order[:stock_id]] += canceled_order[:amount] if canceled_order[:order_type] == 2
       @orders.delete(order_id)
+
+      @log.debug "user(#{@user_id}) - order(#{order_id}) successfully canceled."
+    when :login_me
+      user_id         = message_body[:user_id]
+
+      @log.debug "user(#{@user_id}) - successfully logged."
     else
-      @log.warn "user(#{@user_id}) - confirmation for unrecognized request #{message_name}."
+      @log.warn "user(#{@user_id}) - confirmation for unrecognized #{message_name} request."
     end   
-    @log.debug "user(#{@user_id}) -  confirmation for request #{message_name}."
   end
 
   def on_register_successful(data)
