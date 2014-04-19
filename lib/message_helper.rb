@@ -115,7 +115,7 @@ module MessagingHelper
         @log.warn "user(#{@user_id}) - unrecognized order type(#{order_changed[:order_type]})."
       end
     else 
-      @log.warn "user(#{@user_id}) - order not on the list!."
+      @log.warn "user(#{@user_id}) - order(#{order_id}) not on the list!."
     end
   end
 
@@ -196,6 +196,23 @@ module MessagingHelper
       user_id         = message_body[:user_id]
 
       @log.debug "user(#{@user_id}) - successfully logged."
+    when :subscribe
+      stock_id        = message_body[:stock_id]
+
+      if @subscribed_stocks.include? stock_id
+        @log.debug "user(#{@user_id}) - stock_id(#{stock_id}) already included in subscribed_stocks set." 
+      else
+        @subscribed_stocks << stock_id
+        @log.debug "user(#{@user_id}) - successfully subscribed for stock(#{stock_id})"
+      end
+    when :unsubscribe
+      stock_id        = message_body[:stock_id] 
+      unless @subscribed_stocks.include? stock_id
+        @log.warn "user(#{@user_id}) - stock_id(#{stock_id}) not included in subscribed_stocks set."
+      else
+        @subscribed_stocks.delete stock_id
+        @log.debug "user(#{@user_id}) - successfully unsubscribed from stock(#{stock_id})"      
+      end
     else
       @log.warn "user(#{@user_id}) - confirmation for unrecognized #{message_name} request."
     end   
