@@ -68,15 +68,28 @@ module MessagingHelper
   def on_order_accepted(data)    
     @log.fatal "user(#{@user_id}) - message queue is empty!." if @message_queue.empty?
 
-    _, order = @message_queue.shift
+    request_name, order = @message_queue.shift
     order_id = data[:order_id]
     
     if @orders.include? order_id
       @log.warn "user(#{@user_id}) - order #{order_id} have already been included."
     else
-      @orders.merge! order_id => order
+      case request_name
+      when :sell_stock
+        stock_id = order[:stock_id]
+        @orders.merge! order_id => (order.merge! :order_type => :sell_order)
+        # Market substracts (secures) from you available stocks the amount you want to sell 
+        @stocks[stock_id] -= order[:amount]
+        @stocks.delete(stock_id) unless @stocks[stock_id] > 0
+      when :buy_stock
+        @orders.merge! order_id => (order.merge! :order_type => :buy_order)
+        # Market substracts (secures) money needed for the purchase.
+        @money -= order[:amount] * order[:price]
+        @orders.merge! order_id => order
+      end
     end
-    @log.info "user(#{@user_id}) - order(#{order}) accepted. order_id(#{data[:order_id]})"
+
+    @log.info "user(#{@user_id}) - order(#{order}) accepted. order_id(#{order_id})"
   end
 
   def on_order_change(data)
@@ -90,10 +103,17 @@ module MessagingHelper
     if @orders.include? order_id
       order_changed = @orders[order_id] 
       order_changed[:amount] -= amount_difference
-      @money ||= 0
-      @money += data[:price] * amount_difference if order_changed[:order_type] == 2 #SELL 
-      @stocks[stock_id] ||= 0
-      @stocks[stock_id] += amount_difference if order_changed[:order_type] == 1 # BUY 
+      
+      case order_changed[:order_type]
+      when :sell_order
+        @money ||= 0
+        @money += data[:price] * amount_difference  
+      when :buy_order
+        @stocks[stock_id] ||= 0
+        @stocks[stock_id] += amount_difference
+      else
+        @log.warn "user(#{@user_id}) - unrecognized order type(#{order_changed[:order_type]})."
+      end
     else 
       @log.warn "user(#{@user_id}) - order not on the list!."
     end
@@ -111,12 +131,13 @@ module MessagingHelper
                      
     @message_queue.shift
     @stocks.clear
-    
+
     data[:stocks].each do |stock|
-      if stock[:stock_id] == 1
-    	 	@money = stock[:amount]
+      stock_id, amount = stock[:stock_id], stock[:amount] 
+      if stock_id == 1
+    	 @money = amount
       else
-			 @stocks[stock[:stock_id]] = stock.delete_if { |key| key == :stock_id }
+			 @stocks.merge! stock_id => amount
 		  end
     end
     
@@ -131,7 +152,7 @@ module MessagingHelper
     @orders.clear
     
     data[:orders].each do |order|
-      @orders[order[:order_id]] = order.delete_if { |key| key == :order_id }
+      @orders.merge! order[:order_id] => order.delete(:order_id)
     end
 
     @log.debug "user(#{@user_id}) - orders size = #{@orders.size}."
@@ -140,7 +161,7 @@ module MessagingHelper
   def on_stock_info(data)
     @log.fatal "user(#{@user_id}) - message queue is empty!." if @message_queue.empty?
 
-    message = @message_queue.shift
+    message =   @message_queue.shift
 
     @log.debug "user(#{@user_id}) - message (#{message}) => data received(#{data})."
   end
@@ -168,17 +189,8 @@ module MessagingHelper
       # If canceled order was sell order then return frozen stocks
       @stocks[canceled_order[:stock_id]] += canceled_order[:amount] if canceled_order[:order_type] == 2
       @orders.delete(order_id)
-    when :sell_order
-      @orders.merge! data[:order_id] => (message_body.merge! :order_type => 2)
-      # Market substracts (secures) from you available stocks the amount you want to sell 
-      @stocks[message_body[:stock_id]] -= message_body[:amount]
-      @stocks.delete(message_body[:stock_id]) unless @stocks[message_body[:stock_id]] > 0
-    when :buy_order
-      @orders.merge! data[:order_id] => (message_body.merge! :order_type => 1)
-      # Market substracts (secures) money needed for the purchase.
-      @money -= message_body[:amount] * message_body[:price]
     else
-      @log.warn "user(#{@user_id}) - confirmation for unrecognized requestt #{message_name}."
+      @log.warn "user(#{@user_id}) - confirmation for unrecognized request #{message_name}."
     end   
     @log.debug "user(#{@user_id}) -  confirmation for request #{message_name}."
   end
