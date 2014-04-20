@@ -167,6 +167,7 @@ module MessagingHelper
     message =   @message_queue.shift
 
     stock_id = data[:stock_id]
+
     @stock_info.merge! stock_id => data.tap { |hash| hash.delete(:stock_id) }
                                        .merge!(:timestamp => Time.now.utc.iso8601) 
     @log.debug "user(#{@user_id}) - New stock_info(#{@stock_info[stock_id]}) data for stock(#{stock_id})."

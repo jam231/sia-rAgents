@@ -1,6 +1,8 @@
 # encoding: utf-8
 require_relative 'protocol_helper.rb'
 
+require 'time'
+
 # FIXME: This include below is ugly
 include SiaNetworkProtocol
 
@@ -50,6 +52,15 @@ define_responses("Responses") do |responses|
 							:body => [[:stock_id, :uint32], [:best_buy_order, :best_order], [:best_sell_order, :best_order],
 									  [:last_transaction, :last_transaction]]
 
+	custom_deserializer_for responses, :timestamp_utc_iso8601 do |data|
+    	(timestamp, _), rest = Deserializer.deserialize data, :utf8
+		if timestamp.nil?
+			[:response_dropped, rest]
+		else
+			[Time.parse(timestamp).utc.iso8601, rest]
+		end
+	end			  
+
 	custom_deserializer_for responses, :order_type do |data|
 		(type, _), rest = Deserializer.deserialize data, :uint8
 		if type.nil?
@@ -87,7 +98,11 @@ define_responses("Responses") do |responses|
 			[:nothing, rest]
 		else
 			last_transaction_fields = [:amount, :price, :timestamp]
-			last_transaction_values, rest = Deserializer.deserialize data, [:uint32, :uint32, :utf8]
+
+			(amount, price), rest = Deserializer.deserialize data, [:uint32, :uint32]
+			(timestamp, _),  rest = custom_deserializers[:timestamp_utc_iso8601].call rest
+			
+			last_transaction_values = [amount, price, timestamp]
 			[Hash[last_transaction_fields.zip(last_transaction_values)], rest]
 		end
 	end
