@@ -1,8 +1,10 @@
 # encoding: utf-8
 
-
 module Utils
-
+  #
+  # Simple queue implementation (using two lists)
+  # providing amortized O(1) shift and push operations.
+  #
   class Queue
     def initialize(*args, &block)
       @shift_stack = args.reverse
@@ -16,24 +18,24 @@ module Utils
 
     # Same as push
     def <<(obj)
-      self.push obj
+      push obj
     end
 
     def +(other)
-      queue = self.dup
-      queue.push *other.to_a
+      queue = dup
+      queue.push(*other.to_a)
       queue
     end
 
     def empty?
-      @shift_stack.empty? and @push_stack.empty?
+      @shift_stack.empty? && @push_stack.empty?
     end
 
     def size
       @shift_stack.size + @push_stack.size
     end
 
-    def shift(n=1)
+    def shift(n = 1)
       if @shift_stack.size < n
         @shift_stack = @push_stack.reverse + @shift_stack
         @push_stack = []
@@ -42,11 +44,8 @@ module Utils
       popped = @shift_stack.pop(n).reverse
       popped = popped.first if n == 1
 
-      if block_given?
-        yield popped
-      else
-        popped
-      end
+      yield popped if block_given?
+      popped
     end
 
     def push(*args, &block)

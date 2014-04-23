@@ -12,7 +12,7 @@ module Serializer
     types = [types] unless types.kind_of? Array
 
     unless (values.size <=> types.size) == 0
-      raise ArgumentError, "Value - type correspondence is invalid."
+      fail ArgumentError, "Value - type correspondence is invalid."
     end
 
     values.zip(types).flat_map do |value, type|
@@ -24,7 +24,7 @@ module Serializer
   def self.uint8 values
     values = [values] unless values.kind_of? Array
     values.map do |int|
-      raise ArgumentError, "Not an Integer" unless int.kind_of? Integer
+      fail ArgumentError, "Not an Integer" unless int.kind_of? Integer
       [int].pack('C')
     end
   end
@@ -33,7 +33,7 @@ module Serializer
   def self.uint16 values
     values = [values] unless values.kind_of? Array
     values.map do |int|
-      raise ArgumentError, "Not an Integer" unless int.kind_of? Integer
+      fail ArgumentError, "Not an Integer" unless int.kind_of? Integer
       [int].pack('n')
     end
   end
@@ -41,7 +41,7 @@ module Serializer
   def self.uint32 values
     values = [values] unless values.kind_of? Array
     values.map do |int|
-      raise ArgumentError, "Not an Integer" unless int.kind_of? Integer
+      fail ArgumentError, "Not an Integer" unless int.kind_of? Integer
       [int].pack('N')
     end
   end
@@ -50,7 +50,7 @@ module Serializer
   def self.utf8 values
     values = [values] unless values.kind_of? Array
     values.map do |str|
-      raise ArgumentError, "Not a String" unless str.kind_of? String
+      fail ArgumentError, "Not a String" unless str.kind_of? String
       serialized = str.encode('utf-8').force_encoding('ASCII-8BIT')
       [uint16(serialized.bytesize), serialized].join
     end
@@ -69,7 +69,7 @@ module Deserializer
   def self.deserialize byte_sequence, types
     types = [types] unless types.kind_of? Array
 
-    raise ArgumentError "First argument is not of String kind." unless byte_sequence.kind_of? String
+    fail ArgumentError "First argument is not of String kind." unless byte_sequence.kind_of? String
 
     old_encoding = byte_sequence.encoding
     byte_sequence = byte_sequence.force_encoding('ASCII-8BIT').split(//)
@@ -87,7 +87,7 @@ module Deserializer
 
   # Opertion is well defined for a Integer or a [Integer]
   def self.uint8 byte_sequence
-    raise ArgumentError, "First argument doesn't respond to to_a" unless byte_sequence.respond_to? :to_a
+    fail ArgumentError, "First argument doesn't respond to to_a" unless byte_sequence.respond_to? :to_a
     byte_sequence = byte_sequence.to_a
 
     if byte_sequence.size >= 1
@@ -99,7 +99,7 @@ module Deserializer
 
   # Opertion is well defined for a Integer or a [Integer]
   def self.uint16 byte_sequence
-    raise ArgumentError, "First argument doesn't respond to to_a" unless byte_sequence.respond_to? :to_a
+    fail ArgumentError, "First argument doesn't respond to to_a" unless byte_sequence.respond_to? :to_a
     byte_sequence = byte_sequence.to_a
 
     if byte_sequence.size >= 2
@@ -111,7 +111,7 @@ module Deserializer
 
   # Opertion is well defined for a Integer or a [Integer]
   def self.uint32 byte_sequence
-    raise ArgumentError, "First argument doesn't respond to to_a" unless byte_sequence.respond_to? :to_a
+    fail ArgumentError, "First argument doesn't respond to to_a" unless byte_sequence.respond_to? :to_a
     byte_sequence = byte_sequence.to_a
 
     if byte_sequence.size >= 4
@@ -123,7 +123,7 @@ module Deserializer
 
   # byte_sequnce -> [deserialized : String, rest : String]
   def self.utf8 byte_sequence
-    raise ArgumentError, "First argument doesn't respond to to_a" unless byte_sequence.respond_to? :to_a
+    fail ArgumentError, "First argument doesn't respond to to_a" unless byte_sequence.respond_to? :to_a
     byte_sequence = byte_sequence.to_a
     length, rest = uint16 byte_sequence
 
