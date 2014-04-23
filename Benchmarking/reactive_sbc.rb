@@ -7,7 +7,7 @@ require_relative '../lib/protocol.rb'
 require_relative '../lib/message_helper.rb'
 
 class TestAgent < EM::Connection
-  include Requests   
+  include Requests
   include MessagingHelperEM
 
 
@@ -39,19 +39,19 @@ class TestAgent < EM::Connection
       queue_request :buy_stock, {:stock_id => stock_id, :amount => amount, :price => price}
       @money -= amount * price
     elsif not @orders.empty?
-        order_id = @orders.first[:order_id]
-        queue_request :cancel_order, {:order_id => order_id}
-  
-        @orders.delete(order_id)
+      order_id = @orders.first[:order_id]
+      queue_request :cancel_order, {:order_id => order_id}
+
+      @orders.delete(order_id)
     else
-      queue_request :get_my_stocks 
-    end    
+      queue_request :get_my_stocks
+    end
     @timestamp = Time.now
     @sent += 1
   end
 
   def post_init
-    #10.times { queue_request :register_me, {:password => @password} } 
+    #10.times { queue_request :register_me, {:password => @password} }
 
     @log.info "User(#{@user_id}) with password(#{@password})"
     queue_request :login_me, {:user_id => @user_id, :password => @password}
@@ -75,7 +75,7 @@ class TestAgent < EM::Connection
     super
 
     unless @orders.include? data[:order_id]
-      # Notification order have been distrubed, so server must pay the penalty... 
+      # Notification order have been distrubed, so server must pay the penalty...
       queue_request :get_my_orders
       queue_request :get_my_stocks
     end
@@ -92,14 +92,14 @@ request_count = 100
 connections = []
 
 EventMachine.run do
-	Signal.trap("INT")   { EventMachine.stop }
-	Signal.trap("TERM")  { EventMachine.stop }
+  Signal.trap("INT")   { EventMachine.stop }
+  Signal.trap("TERM")  { EventMachine.stop }
   EventMachine.add_shutdown_hook { puts "Closing simulation."}
   agents_count.times do |i|
     connections << EventMachine::connect('192.168.0.3', 12345, TestAgent, i + 2, "ąąąąą", request_count)
-	end
-  
-  EventMachine.add_periodic_timer 0.1 do 
+  end
+
+  EventMachine.add_periodic_timer 0.1 do
     EventMachine.stop unless connections.any?(&:active?)
     puts "Active connections: #{connections.count(&:active?)}."
   end
@@ -110,5 +110,4 @@ timespan = Time.now - simulation_timestamp
 request_count = request_count + 3
 puts "Simulation with #{agents_count} agents (each sent #{request_count} messages) finished after #{timespan} sec."
 puts "Requests sent overall: #{agents_count * request_count}."
-puts "RPS: #{agents_count * request_count / timespan}." 
-
+puts "RPS: #{agents_count * request_count / timespan}."

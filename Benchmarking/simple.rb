@@ -6,7 +6,7 @@ require 'eventmachine'
 require_relative '../lib/protocol.rb'
 
 class TestAgent < EM::Connection
-  include Requests  
+  include Requests
   include Responses
 
   def initialize(user_id, password, max_requests)
@@ -23,16 +23,16 @@ class TestAgent < EM::Connection
 
   def receive_data data
     responses = []
-    loop do 
+    loop do
       response, data = from_data data
-      break if [:not_enough_bytes, :response_dropped].include? response 
+      break if [:not_enough_bytes, :response_dropped].include? response
       responses << response
-    end 
-    puts "I (id = #{@user_id}) got some sweet data... #{responses} ...after #{(Time.now - @timestamp ) * 1000} ms."
+    end
+    #puts "I (id = #{@user_id}) got some sweet data... #{responses} ...after #{(Time.now - @timestamp ) * 1000} ms."
     send_data get_my_stocks
 
     @timestamp = Time.now
-    @received += 1  
+    @received += responses.size
 
     close_connection if @received >= @max_requests
   end
@@ -54,7 +54,7 @@ class TestAgent < EM::Connection
   end
 end
 
-EventMachine.threadpool_size = 4
+EventMachine.threadpool_size = 10
 # On systems without epoll its a no-op.
 EventMachine.epoll
 
@@ -65,14 +65,14 @@ request_count = 200
 connections = []
 
 EventMachine.run do
-	Signal.trap("INT")   { EventMachine.stop }
-	Signal.trap("TERM")  { EventMachine.stop }
+  Signal.trap("INT")   { EventMachine.stop }
+  Signal.trap("TERM")  { EventMachine.stop }
   EventMachine.add_shutdown_hook { puts "Closing simulation."}
   agents_count.times do |i|
-    connections << EventMachine::connect('localhost', 12345, TestAgent, i + 10, "ąąąąą", request_count)
-	end
-  
-  EventMachine.add_periodic_timer 1 do 
+    connections << EventMachine::connect('192.168.0.3', 12345, TestAgent, i + 10, "ąąąąą", request_count)
+  end
+
+  EventMachine.add_periodic_timer 1 do
     EventMachine.stop unless connections.any?(&:active?)
   end
 end
@@ -80,5 +80,4 @@ end
 timespan = Time.now - simulation_timestamp
 puts "Simulation with #{agents_count} agents (each sent #{request_count} messages) finished after #{timespan} sec."
 puts "Requests sent overall: #{agents_count * request_count}."
-puts "RPS: #{agents_count * request_count / timespan}." 
-
+puts "RPS: #{agents_count * request_count / timespan}."
