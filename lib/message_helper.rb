@@ -168,12 +168,12 @@ module MessagingHelper
     @log.fatal "user(#{@user_id}) - message queue is empty!." if @request_queue.empty?
 
     request_name, request_body = @request_queue.shift
-    on_ok_handler = "on_ok_#{message_name}".intern
+    on_ok_handler = "on_ok_#{request_name}".intern
 
     if respond_to? on_ok_handler
-      send on_ok_handler, request_body
+      send on_ok_handler, data, request_body
     else
-      @log.warn "user(#{@user_id}) - confirmation for unrecognized #{message_name} request."
+      @log.warn "user(#{@user_id}) - confirmation for unrecognized #{request_name} request."
     end
   end
 
