@@ -64,7 +64,6 @@ module SiaNetworkProtocol
 
           fields_types.each do |type|
             value, rest_of_data = call_deserializer_for type, rest_of_data
-            value = value.first if custom.nil? and value.size == 1
             values << value
           end
 
@@ -87,12 +86,10 @@ module SiaNetworkProtocol
       @@custom_deserializers   = {}
 
       def call_deserializer_for(type, data)
-        custom = @@response_deserializers[type]
-        if custom.nil?
-          deserialize data, type
-        else
-          custom.call data
-        end
+        custom      = @@custom_deserializers[type]
+        value, rest = custom.nil? ? deserialize(data, type) : custom.call(data)
+        value       = value.first if custom.nil? and value.size == 1
+        [value, rest]
       end
 
       def unrecognized_response data
