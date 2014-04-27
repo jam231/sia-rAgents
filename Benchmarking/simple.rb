@@ -4,17 +4,20 @@
 require 'eventmachine'
 
 require_relative '../lib/protocol.rb'
+require_relative '../lib/message_helper.rb'
 
 class TestAgent < EM::Connection
   include Requests
-  include Responses
+  include MessagingHelperEM
 
   def initialize(user_id, password, max_requests)
+    super
     @max_requests = max_requests
     @received = 0
     @active = false
     @user_id = user_id
     @password = password
+    @log.level = Logger::DEBUG
   end
 
   def connection_completed
@@ -22,14 +25,11 @@ class TestAgent < EM::Connection
   end
 
   def receive_data data
-    responses = []
-    loop do
-      response, data = from_data data
-      break if [:not_enough_bytes, :response_dropped].include? response
-      responses << response
-    end
+    responses = gather_responses data
+    process_responses responses
+
     #puts "I (id = #{@user_id}) got some sweet data... #{responses} ...after #{(Time.now - @timestamp ) * 1000} ms."
-    send_data get_my_stocks
+    queue_request :get_my_stocks
 
     @timestamp = Time.now
     @received += responses.size
@@ -38,10 +38,8 @@ class TestAgent < EM::Connection
   end
 
   def post_init
-    #send_data register_me @password
-    puts "User(#{@user_id}) with password(#{@password})"
-    send_data login_me(@user_id, @password)
-    @timestamp = Time.now
+    queue_request :login_me, {:user_id => @user_id, :password => @password}
+    #@timestamp = Time.now
   end
 
   def unbind
@@ -69,7 +67,7 @@ EventMachine.run do
   Signal.trap("TERM")  { EventMachine.stop }
   EventMachine.add_shutdown_hook { puts "Closing simulation."}
   agents_count.times do |i|
-    connections << EventMachine::connect('192.168.0.3', 12345, TestAgent, i + 10, "ąąąąą", request_count)
+    connections << EventMachine::connect('localhost', 12345, TestAgent, i + 1, "ąąąąą", request_count)
   end
 
   EventMachine.add_periodic_timer 1 do
