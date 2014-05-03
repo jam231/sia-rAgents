@@ -11,13 +11,13 @@ class TestAgent < EM::Connection
   include MessagingHelperEM
 
   def initialize(user_id, password, max_requests)
-    super
+    super()
     @max_requests = max_requests
     @received = 0
     @active = false
     @user_id = user_id
     @password = password
-    @log.level = Logger::DEBUG
+    @log.level = Logger::INFO
   end
 
   def connection_completed
@@ -52,13 +52,13 @@ class TestAgent < EM::Connection
   end
 end
 
-EventMachine.threadpool_size = 10
+EventMachine.threadpool_size = 6
 # On systems without epoll its a no-op.
 EventMachine.epoll
 
 simulation_timestamp = Time.now
 agents_count = 5000
-request_count = 200
+request_count = 300
 
 connections = []
 
