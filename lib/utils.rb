@@ -57,4 +57,14 @@ module Utils
       end
     end
   end
+
+
+  def self.logger_or_default(logger)
+    if logger.nil?
+      logger = Logger.new(STDOUT)
+      logger.level = Logger::FATAL
+    end
+    logger
+  end
+
 end
