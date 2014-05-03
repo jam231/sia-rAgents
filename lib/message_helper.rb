@@ -16,27 +16,74 @@ require_relative 'utils.rb'
 require 'logger'
 require 'set'
 require 'time'
+require 'forwardable'
 
-module MessagingHelper
-  include Responses
 
-  def initialize(*args, &block)
+class RequestHelper
+  include Requests
+
+  extend Forwardable
+
+  def_delegator :@request_queue, :shift, :shift_request
+  def_delegator :@request_queue, :empty?, :empty_request_queue?
+
+  def initialize(hash_args={}, &block)
     @request_queue = Utils::Queue.new
-
-    @log = Logger.new(STDOUT)
-    @log.level = Logger::INFO
-
-    @subscribed_stocks = Set.new
-    @stocks = {}
-    @orders = {}
-    @stock_info = {}
-
-    yield if block_given?
   end
 
   # name=symbol, body={field_name=symbol => value}
   def queue_request(name, body = nil)
-    @request_queue << [name, body].compact
+    @request_queue << [name, body]
+  end
+end
+
+class ResponseHelper
+  include Responses
+
+  def initialize(hash_args={}, &block)
+    @buffer = ''
+    @log = Utils::logger_or_default hash_args[:logger]
+    yield if block_given?
+  end
+
+  def gather_responses(data)
+    data = [@buffer, data].join
+    responses = []
+    loop do
+      response, data = from_data data
+      if response == :not_enough_bytes
+        @buffer = data
+        break
+      elsif response == :response_dropped
+        @log.debug 'Dropped message...'
+      else
+        responses << response
+      end
+    end
+    responses
+  end
+end
+
+
+module MessagingHelper
+  extend Forwardable
+
+  def_delegator :@request_helper,  :queue_request, :queue_request
+  def_delegator :@response_helper, :gather_responses, :gather_responses
+
+  # optional: hash_args = {logger : ..., response_helper : ...,
+  #                        request_helper : ...}
+  def initialize(hash_args={}, &block)
+    @log             = Utils::logger_or_default hash_args[:logger]
+    @response_helper = hash_args[:response_helper] || ResponseHelper.new(hash_args)
+    @request_helper  = hash_args[:request_helper]  || RequestHelper.new(hash_args)
+
+    @subscribed_stocks = Set.new
+    @stocks            = {}
+    @orders            = {}
+    @stock_info        = {}
+
+    yield if block_given?
   end
 
   # responses=[name=symbol, body={field_name=symbol => value}]
@@ -51,10 +98,11 @@ module MessagingHelper
     end
   end
 
-  def on_order_accepted(data)
-    @log.fatal "user(#{@user_id}) - message queue is empty!." if @request_queue.empty?
 
-    request_name, order = @request_queue.shift
+  def on_order_accepted(data)
+    @log.fatal "user(#{@user_id}) - message queue is empty!." if @request_helper.empty_request_queue?
+
+    request_name, order = @request_helper.shift_request
     order_id = data[:order_id]
 
     if @orders.include? order_id
@@ -113,9 +161,9 @@ module MessagingHelper
   end
 
   def on_list_of_stocks(data)
-    @log.fatal "user(#{@user_id}) - message queue is empty!." if @request_queue.empty?
+    @log.fatal "user(#{@user_id}) - message queue is empty!." if @request_helper.empty_request_queue?
 
-    @request_queue.shift
+    @request_helper.shift_request
     @stocks.clear
 
     data[:stocks].each do |stock|
@@ -132,9 +180,9 @@ module MessagingHelper
   end
 
   def on_list_of_orders(data)
-    @log.fatal "user(#{@user_id}) - message queue is empty!." if @request_queue.empty?
+    @log.fatal "user(#{@user_id}) - message queue is empty!." if @request_helper.empty_request_queue?
 
-    @request_queue.shift
+    @request_helper.shift_request
     @orders.clear
 
     data[:orders].each do |order|
@@ -145,9 +193,9 @@ module MessagingHelper
   end
 
   def on_stock_info(data)
-    @log.fatal "user(#{@user_id}) - message queue is empty!." if @request_queue.empty?
+    @log.fatal "user(#{@user_id}) - message queue is empty!." if @request_helper.empty_request_queue?
 
-    @request_queue.shift
+    @request_helper.shift_request
 
     stock_id = data[:stock_id]
     timestamp = { :timestamp => Time.now.utc.iso8601 }
@@ -158,16 +206,16 @@ module MessagingHelper
   end
 
   def on_fail(data)
-    @log.fatal "user(#{@user_id}) - message queue is empty!." if @request_queue.empty?
+    @log.fatal "user(#{@user_id}) - message queue is empty!." if @request_helper.empty_request_queue?
 
-    message = @request_queue.shift
+    message = @request_helper.shift_request
     @log.debug "user(#{@user_id}) - message #{message} have failed with #{data}."
   end
 
   def on_ok(data)
-    @log.fatal "user(#{@user_id}) - message queue is empty!." if @request_queue.empty?
+    @log.fatal "user(#{@user_id}) - message queue is empty!." if @request_helper.empty_request_queue?
 
-    request_name, request_body = @request_queue.shift
+    request_name, request_body = @request_helper.shift_request
     on_ok_handler = "on_ok_#{request_name}".intern
 
     if respond_to? on_ok_handler
@@ -224,9 +272,9 @@ module MessagingHelper
   end
 
   def on_register_successful(data)
-    @log.fatal "user(#{@user_id}) - message queue is empty!." if @request_queue.empty?
+    @log.fatal "user(#{@user_id}) - message queue is empty!." if @request_helper.empty_request_queue?
 
-    @request_queue.shift
+    @request_helper.shift_request
     @log.info "Registered user(#{data[:user_id]})."
   end
 
@@ -239,40 +287,16 @@ end
 module MessagingHelperEM
   include MessagingHelper
 
-  def initialize(*args, &block)
-    super
-    @buffer = ''
-    yield if block_given?
-  end
-
-  def queue_request(name, args = nil)
+  # name=symbol, body={field_name=symbol => value}
+  def queue_request(name, body = nil)
     super
     # From Ruby docs about Hash:
     # 'Hashes enumerate their values in the order that the
     #  corresponding keys were inserted.'
-    if args.nil?
+    if body.nil?
       send_data send(name)
-
     else
-      send_data send(name, *args.values)
-
+      send_data send(name, *body.values)
     end
-  end
-
-  def gather_responses(data)
-    data = [@buffer, data].join
-    responses = []
-    loop do
-      response, data = from_data data
-      if response == :not_enough_bytes
-        @buffer = data
-        break
-      elsif response == :response_dropped
-        @log.debug 'Dropped message...'
-      else
-        responses << response
-      end
-    end
-    responses
   end
 end
