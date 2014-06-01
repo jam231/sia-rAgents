@@ -40,6 +40,7 @@ module MessageHelpers
   class ResponseHelper
     include Responses
 
+    # optional: hash_args = {logger: ...}
     def initialize(hash_args={}, &block)
       @buffer = ''
       @log = Utils::logger_or_default hash_args[:logger]
@@ -71,8 +72,8 @@ module MessageHelpers
     def_delegator :@request_helper,  :queue_request, :queue_request
     def_delegator :@response_helper, :gather_responses, :gather_responses
 
-    # optional: hash_args = {logger : ..., response_helper : ...,
-    #                        request_helper : ...}
+    # optional: hash_args = {logger: ..., response_helper: ...,
+    #                        request_helper: ...}
     def initialize(hash_args={}, &block)
       @log             = Utils::logger_or_default hash_args[:logger]
       @response_helper = hash_args[:response_helper] || ResponseHelper.new(hash_args)

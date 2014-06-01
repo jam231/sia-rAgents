@@ -8,7 +8,7 @@ require_relative '../lib/message_helper.rb'
 
 class TestAgent < EM::Connection
   include Requests
-  include MessagingHelperEM
+  include MessageHelpers::MessagingHelperEM
 
 
   def initialize(user_id, password, max_requests)
