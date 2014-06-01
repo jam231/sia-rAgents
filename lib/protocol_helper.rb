@@ -15,6 +15,10 @@ end
 
 
 module SiaNetworkProtocol
+
+  # Registers new request, by creating a serializer for as send_<name> method
+  # klass - a module in which request will be defined. 
+  # args = name: <symbol>, type: <integer> [, body: <[] by default, or [[<field_name_as_symbol>, <field_type_as_symbol]]> ]
   def request_for(klass, args)
     _, fields_types, * = args.fetch(:body, []).transpose
     name, type = args[:name].to_sym, args[:type]
@@ -46,6 +50,9 @@ module SiaNetworkProtocol
     end
   end
 
+  # Registers new response, by creating a deserializer for it inside <em>from_data</em> method.
+  # klass - a module in which response will be defined. 
+  # args = name: <symbol>, type: <integer> [, body: <[] by default, or [[<field_name_as_symbol>, <field_type_as_symbol]]> ]
   def response_for(klass, args)
     fields, fields_types, * = args.fetch(:body,[]).transpose
 
