@@ -37,9 +37,10 @@ module SiaNetworkProtocol
     yield requests_module
   end
 
-  # Function given by block should either return [values, remaining_data]
-  # or [:response_dropped, data] if supplied data is, for some reason, invalid.
+  # Block parameter should either return [values, remaining_data]
+  # or [:response_dropped, data] if supplied data is (for some reason) invalid.
   def custom_deserializer_for(klass, type, &block)
+    raise "Needs a block" unless block_given?
     klass.instance_eval do
       @@custom_deserializers[type] = Proc.new &block
     end
