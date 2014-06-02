@@ -74,7 +74,7 @@ module MessageHelpers
 
     # optional: hash_args = {logger: ..., response_helper: ...,
     #                        request_helper: ...}
-    def initialize(hash_args={}, &block)
+    def initialize(hash_args={})
       @log             = Utils::logger_or_default hash_args[:logger]
       @response_helper = hash_args[:response_helper] || ResponseHelper.new(hash_args)
       @request_helper  = hash_args[:request_helper]  || RequestHelper.new(hash_args)
@@ -288,6 +288,10 @@ module MessageHelpers
   module MessagingHelperEM
     include MessagingHelper
 
+    def initialize(hash_args={})
+      super hash_args
+      yield if block_given?
+    end
     # name=symbol, body={field_name=symbol => value}
     def queue_request(name, body = nil)
       super

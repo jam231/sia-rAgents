@@ -7,8 +7,8 @@ require_relative '../lib/protocol.rb'
 require_relative '../lib/message_helper.rb'
 
 class TestAgent < EM::Connection
-  include Requests
   include MessageHelpers::MessagingHelperEM
+  include Requests
 
   def initialize(user_id, password, max_requests)
     super()
@@ -38,6 +38,7 @@ class TestAgent < EM::Connection
   end
 
   def post_init
+    #10.times { queue_request :register_me, {password: @password} }
     queue_request :login_me, {:user_id => @user_id, :password => @password}
     #@timestamp = Time.now
   end
@@ -52,13 +53,13 @@ class TestAgent < EM::Connection
   end
 end
 
-EventMachine.threadpool_size = 6
+EventMachine.threadpool_size = 20
 # On systems without epoll its a no-op.
 EventMachine.epoll
 
 simulation_timestamp = Time.now
-agents_count = 5000
-request_count = 300
+agents_count = 2000
+request_count = 500
 
 connections = []
 

@@ -50,7 +50,7 @@ class TestAgent < EM::Connection
   end
 
   def post_init
-    10.times { queue_request :register_me, {:password => @password} }
+    #10.times { queue_request :register_me, {:password => @password} }
 
     @log.info "User(#{@user_id}) with password(#{@password})"
     queue_request :login_me, {:user_id => @user_id, :password => @password}
@@ -68,16 +68,6 @@ class TestAgent < EM::Connection
 
   def active?
     @active
-  end
-
-  def on_order_change(data)
-    super
-
-    unless @orders.include? data[:order_id]
-      # Notification order have been distrubed, so server must pay the penalty...
-      queue_request :get_my_orders
-      queue_request :get_my_stocks
-    end
   end
 end
 
